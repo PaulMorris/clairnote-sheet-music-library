@@ -1,0 +1,49 @@
+JUST RERERUN LILYPOND ON CURRENT COLLECTION TO UPDATE PDFS 
+for example, when there are improvements / changes to clairnote-code.ly
+
+0. make sure you have an "out" directory with only "previous-final.csv" in it
+   (this is a copy of the previous "full-final.csv")
+
+
+2. OPTIONAL: convert-ly 
+  (but ultimately it's better for this big convert-ly to happen at the mutopia project... hmmm...)
+  - use convert-ly.py script
+  - // re run py-make-new-adds-csv.py to get the updated version info into the csv
+  - git commit changes to repo
+
+
+4. run lilypond with mass-run-ly script
+  - copy previous-final.csv, rename, and delete any omitted rows, then use this csv to run ly on all files
+  - produces a4, letter, and midi (turn these on or off in the script)
+  - log is automatically saved to a txt file.
+
+4. fix any errors worth fixing and repeat running lilypond, rinse and repeat
+  - create a temporary csv with just files to re-run ly on to save time
+  
+
+
+6. run copy-to-new-directory to create a directory of only the files for the clairnote site
+  - use a csv with all pieces to be uploaded
+    
+6. upload new files to site
+  - PDF, MIDI, & LY files are ftp uploaded
+  
+7. rename "out" directory to "out-2015-12-05" and create a new "out" directory 
+7. copy previous "full-final.csv" into new out directory and rename to "previous-final.csv" 
+7. delete old "mutopia-clairnote-out-..." directory with copies of pdfs and midis that are in the repo
+
+
+
+
+
+
+
+
+
+
+OBSOLETE
+
+4. run find-errors-and-omit script to scan log file for problems, but error files should already be omitted
+  - takes a csv, the txt log file, and produces a new csv with problems omitted
+  - use new files csv
+  TODO: this can be incorporated into mass-run-ly script.

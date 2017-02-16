@@ -1,0 +1,136 @@
+Python Clairnote Music Library process
+
+
+JUST UPDATE WITH NEW FILES
+
+0. update the git repo
+  - git checkout cn/main5
+  - git pull -r upstream master
+  - resolve any merge conflicts, hopefully not many
+
+0. make sure you have an "out" directory with just "previous-final.csv" in it
+   this is a copy of the previous "full-final.csv"
+
+
+1. run csv-from-repo script, to generate a CSV file
+  - the csv file will only have files of ly vsn 2.14 or higher
+  - it has meta data from the old CSV included (omit? etc.) and new items marked as new
+
+
+2. convert-ly: check new files in csv to see if any need convert-ly
+  - if they do, then convert-ly them, manually or with convert-ly.py script
+  - manually check the log for errors and note them in the CSV file
+  - re-run csv-from-repo to get the updated version info into the csv
+
+
+3. run mass-edit-lys script to edit ly files
+  - takes a csv file and edits those files
+  - adds clairnote-code include line, edits the tagline, copyright, etc.
+  - check results with git diff
+
+3. git commit changes to repo
+
+
+4. run lilypond with mass-run-ly script
+  - target specific subsets with command line args
+  - produces a4, letter, and midi (turn these on or off in the script)
+  - log is saved to a txt file
+  - error log file is generated
+  - new csv with problems omitted is generated
+
+4. fix any errors worth fixing (including git committing them) and repeat mass-run
+
+4. mark any works to be omitted in the csv file
+
+
+5. Sort the CSV file by 1. mutopiacomposer 2. cn-opus 3. cn-title  (parse order does not match this on linux...)
+
+5. run csv-to-adds-and-json script to produce new adds report, json, and html
+  - this is all in one script so there's one canonical composers list
+  - takes a csv data file and logs a list of new items
+  - later use this log output to blog about new items
+  - catches any missing composers or bad instruments, fix these and repeat before continuing
+
+  - produces json data and html checkboxes for filtering the library
+  - optionally edit checkboxes html file by hand for better grouping
+
+  - TODO: check to make sure all items have a style
+  - TODO: instrument fields in ly files are a mess...
+
+6. run copy-to-new-directory to create a directory of only the files for the clairnote site
+  - use new files status to only copy the new files into this directory
+
+6. upload new files to site
+  - PDF, MIDI, & LY files are ftp uploaded to 'sheet-music-files' directory
+  - HTML checkboxes are copy/pasted into page-sheet-music-library.php in the clairnote WP theme
+  - TODO: generate the whole page-sheet-music-library.php file with python to eliminate cut and paste step
+  - the new sheet-music-lib-data.js goes in the WP theme's /js/ directory
+
+
+7. rename "out" directory to "out-2015-12-05" and create a new "out" directory
+7. copy previous final CSV into new out directory and rename to "previous-final.csv"
+7. edit previous-final.csv to remove new status on all items
+7. delete old "mutopia-clairnote-out-..." directory with copies of pdfs and midis that are in the repo
+
+
+
+FROM SCRATCH
+
+1. Run csv-from-repo script, to generate a CSV file
+  - set the root directory of the repo
+  - set the name of the resulting CSV file
+  - the CSV file will only have files of ly vsn 2.14 or higher
+
+1. at any point, optionally edit the csv file to omit any, with 'T' for the omit field
+
+
+2. (optionally) run covert-ly python script to convert files
+
+2. git commit changes to repo
+
+2. cut/paste log of convert-ly process to a file to scan for problems with find-errors script
+
+2. run omit-problems script
+  - takes a csv and produces a new csv with some omitted
+  - needs a list of error ids pasted into the script, from find-errors script
+
+
+3. edit ly files with edit-lys script
+  - takes a CSV file of files to edit, and edits those files
+  - adds clairnote-code include line
+  - edits the tagline, copyright, etc.
+
+3. git commit changes to repo
+
+
+4. run lilypond with run-ly script
+  - produces a4, letter, and midi
+  - turn these on or off with command line args
+  - log is saved to a txt file
+  - error log file is generated
+  - new csv with errors indicated is generated
+
+5. run to-json script to produce json and html from csv
+
+5. upload new files to site
+
+
+
+
+
+OBSOLETE
+
+6. Obsolete?  run find-new-works script
+  - takes old csv data file and new one and creates a new csv file of just new items
+  - use log output to blog about new items
+
+[ 3. change cn-code from False to True in new files csv
+  - NOT NEEDED. Only the omit data from this file survives. ]
+
+  4. run find-errors-and-omit script
+  - takes a csv, the txt log file, and produces a new csv with problems omitted
+  - use new files csv
+
+4. run omit-problems script
+  - takes a csv and produces a new csv with some omitted
+  - needs a list of error ids pasted into the script, from find-errors script

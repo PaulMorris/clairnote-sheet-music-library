@@ -1,0 +1,33 @@
+mutopiatitle - 
+    if not set: title
+
+mutopiacomposer
+
+mutopiapoet (optional)
+    If not set: poet
+
+mutopiaopus (optional)
+    If not set: opus
+
+mutopiainstrument 
+    If not set: instrument
+
+date (Optional)
+
+source
+
+style
+
+license
+    one of...
+    "Creative Commons Attribution-ShareAlike 4.0"
+    "Creative Commons Attribution 4.0"
+    "Public Domain"
+
+maintainer
+
+maintainerEmail (Optional)
+
+maintainerWeb (Optional)
+
+moreInfo (Optional)

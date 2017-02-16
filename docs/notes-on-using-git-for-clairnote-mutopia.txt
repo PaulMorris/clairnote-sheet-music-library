@@ -1,0 +1,54 @@
+Notes on using git with Clairnote mutopia project
+
+https://help.github.com/articles/syncing-a-fork/
+
+https://github.com/MutopiaProject/MutopiaProject/wiki/Setting-up-for-Contributions-via-GITHUB
+
+- use the same fork and clone as I use to work on mutopia stuff
+- create clairnote branches for clairnote library work
+
+
+####
+regular mutopia work remains on local master and topic branches as usual:
+
+  git checkout master
+  git fetch upstream
+  git merge upstream/master
+  
+
+####
+Branch: cn/trad
+
+This branch only has commits fixing up the files for parsing (fixing metadata, etc.).
+Branches converting to clairnote should be based on this branch.
+Update this branch with latest mutopia changes with:
+
+  git checkout cn/trad
+  git pull -r upstream master
+
+This does a git pull and git rebase putting my commits at the end of the commit log.  
+
+
+####
+Branch cn/main5
+
+This branch has conversions to Clairnote on it, 
+and is originally based on cn/trad 
+(how to get additional cn/trad changes into it?)
+
+Update this branch with latest mutopia changes with:
+
+  git checkout cn/main5
+  git pull -r upstream master
+
+- there should not be any merge conflicts unless someone updates a file that I have locally updated with convert-ly.  And then it should be easy to resolve the merge conflicts.
+
+- the only changes to the files in this branch are adding \include "clairnote-code.ly" and the new footer fields.  This should usually be done with python script, but can be done manually if need be.
+
+- make sure to commit any changes.
+
+
+
+
+
+- NOTE: we are using 'pull' and 'rebase' (pull -r) instead of 'fetch' and 'merge'.  This keeps our commits at the most recent position in the history, with upstream changes and additions coming before them.
