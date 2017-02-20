@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import os, re, csv
+import os, re, csv, argparse
 
 oldCSVfile = 'out/previous-final.csv'
 fromRepoCSVfile = 'out/from-repo.csv'
@@ -8,6 +8,20 @@ fromRepoCSVfile = 'out/from-repo.csv'
 # Set the directory you want to start from
 # rootDir = 'test-ly-files'
 rootDir = '../../The-Mutopia-Project/ftp/'
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument("rootdir", help="copy only items that are not omitted")
+parser.add_argument("-o", "--csv-output", help="copy only items that are not omitted")
+parser.add_argument("-p", "--csv-previous", help="copy only items that are not omitted")
+
+args = parser.parse_args()
+
+# TODO: change names throughout
+oldCSVfile = args.csv_previous
+fromRepoCSVfile = args.csv_output
+rootDir = args.rootdir
+
 
 csvKeys = ['mutopia-id', 'parse-order', 'omit?', 'omit-reason', 'new?', 'error-status?', 'flagged?',
     'cn-code', 'ly-version', 'mutopiacomposer', 'cn-title', 'cn-opus', 'path', 'filename',
@@ -143,7 +157,10 @@ def extractData(fdata, vsn, notIncludedFiles, dirpath, rootDir, fname):
 
     fdata['filename'] = ',,, '.join(list(notIncludedFiles))
 
-    fdata['path'] = dirpath[len(rootDir):]
+    # strip slash on the left for good measure, for tests etc.
+    fdata['path'] = dirpath[len(rootDir):].lstrip(os.path.sep)
+
+    print(dirpath, "   ", rootDir, "   ", fdata['path'])
 
     # store the file's 'last-modified' time stamp
     # TODO: how to handle for multi ly files?
@@ -339,7 +356,8 @@ print('LilyPond files parsed, data gathered.\n  Total works:', totalWorks,
 
 # GET OLD META DATA, MERGE IT IN, AND MARK NEW ITEMS
 
-if 'y' == input('Merge in meta data from previous CSV file and mark new items as new? (type y)'):
+# if 'y' == input('Merge in meta data from previous CSV file and mark new items as new? (type y)'):
+if args.csv_previous:
     oldMetaData = {}
 
     with open(oldCSVfile, newline='') as oldCSVread:
