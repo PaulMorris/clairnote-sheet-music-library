@@ -1,27 +1,15 @@
 #!/usr/bin/env python3
 import os, re, csv, argparse
 
-oldCSVfile = 'out/previous-final.csv'
-fromRepoCSVfile = 'out/from-repo.csv'
+# walks through a directory and all subdirectories creating a csv file with data from the ly files
 
-# walk through a directory and all subdirectories
-# Set the directory you want to start from
-# rootDir = 'test-ly-files'
-rootDir = '../../The-Mutopia-Project/ftp/'
-
-
+# COMMAND LINE ARGUMENTS
 parser = argparse.ArgumentParser()
-parser.add_argument("rootdir", help="copy only items that are not omitted")
-parser.add_argument("-o", "--csv-output", help="copy only items that are not omitted")
-parser.add_argument("-p", "--csv-previous", help="copy only items that are not omitted")
-
+parser.add_argument("rootdir", help="The root directory that contains the ly files") # e.g. '../../The-Mutopia-Project/ftp/' or 'test-ly-files'
+parser.add_argument("-o", "--csv-output", help="Path and name for the CSV file output") # e.g. 'out/from-repo.csv'
+parser.add_argument("-p", "--csv-previous", help="Path and name of the previous CSV file") # e.g. 'out/previous-final.csv'
+parser.add_argument("-l", "--earliest-ly-version", help="The earliest LilyPond version to include in CSV file") # e.g. '2.14.0'
 args = parser.parse_args()
-
-# TODO: change names throughout
-oldCSVfile = args.csv_previous
-fromRepoCSVfile = args.csv_output
-rootDir = args.rootdir
-
 
 csvKeys = ['mutopia-id', 'parse-order', 'omit?', 'omit-reason', 'new?', 'error-status?', 'flagged?',
     'cn-code', 'ly-version', 'mutopiacomposer', 'cn-title', 'cn-opus', 'path', 'filename',
@@ -32,15 +20,10 @@ csvKeys = ['mutopia-id', 'parse-order', 'omit?', 'omit-reason', 'new?', 'error-s
     'mutopiainstrument', 'instrument', 'mutopiapoet', 'poet', 'mutopialicense', 'license']
 
 preCsvData = []
-
 parseOrder = 1
-
 totalWorks = 0
 diffKeysCount = 0
 subdirectorySkips = 0
-
-# the earliest LilyPond file version we're interested in
-earliestLyVersion = '2.14.0'
 
 
 def balancedBraces(arg):
@@ -94,7 +77,6 @@ def regexSearch(r, s):
     if s == None:
         return None
     a = r.search(s)
-    # print(a)
     if a == None:
         return None
     else:
@@ -132,7 +114,7 @@ def getMutopiaHeader(filetext):
     return fdata
 
 
-def extractData(fdata, vsn, notIncludedFiles, dirpath, rootDir, fname):
+def extractData(fdata, vsn, notIncludedFiles, dirpath, rootdir, fname):
 
     # use separate 'cn-' fields so we can see what's going on in the .ly files
     fdata['cn-title'] = fdata['mutopiatitle'] or fdata['title']
@@ -143,11 +125,11 @@ def extractData(fdata, vsn, notIncludedFiles, dirpath, rootDir, fname):
     fdata['cn-license'] = fdata['mutopialicense'] or fdata['license'] or fdata['copyright']
 
     licenseLookup = {
-    'Public Domain': ['pd', 0],
-    'Creative Commons Attribution 4.0': ['by', 4],
-    'Creative Commons Attribution 3.0': ['by', 3],
-    'Creative Commons Attribution-ShareAlike 3.0': ['by-sa', 3],
-    'Creative Commons Attribution-ShareAlike 4.0': ['by-sa', 4]
+        'Public Domain': ['pd', 0],
+        'Creative Commons Attribution 4.0': ['by', 4],
+        'Creative Commons Attribution 3.0': ['by', 3],
+        'Creative Commons Attribution-ShareAlike 3.0': ['by-sa', 3],
+        'Creative Commons Attribution-ShareAlike 4.0': ['by-sa', 4]
     }
 
     fdata['license-type'] = licenseLookup.get(fdata['cn-license'], ['', ''])[0]
@@ -158,9 +140,9 @@ def extractData(fdata, vsn, notIncludedFiles, dirpath, rootDir, fname):
     fdata['filename'] = ',,, '.join(list(notIncludedFiles))
 
     # strip slash on the left for good measure, for tests etc.
-    fdata['path'] = dirpath[len(rootDir):].lstrip(os.path.sep)
+    fdata['path'] = dirpath[len(rootdir):].lstrip(os.path.sep)
 
-    print(dirpath, "   ", rootDir, "   ", fdata['path'])
+    print(dirpath, "   ", rootdir, "   ", fdata['path'])
 
     # store the file's 'last-modified' time stamp
     # TODO: how to handle for multi ly files?
@@ -223,7 +205,7 @@ def getAllDirLyPaths(rootdir):
     return lypaths
 
 
-def processLyNames(lyfilenames, dirpath, rootDir):
+def processLyNames(lyfilenames, dirpath, rootdir):
     # GET THE VERSION
     vsn = None
     for fname in lyfilenames:
@@ -237,10 +219,10 @@ def processLyNames(lyfilenames, dirpath, rootDir):
         if vsn != None: break
 
     # GET HEADER DATA ETC
-    if vsn != None and vsnGreaterThanOrEqualTo(earliestLyVersion, vsn):
+    if vsn != None and vsnGreaterThanOrEqualTo(args.earliest_ly_version, vsn):
         global totalWorks
         totalWorks += 1
-        # print('\n\n', vsn, dirpath[len(rootDir):], '\n', lyfilenames)
+        # print('\n\n', vsn, dirpath[len(rootdir):], '\n', lyfilenames)
 
         # get list of included files
         includedFiles = set()
@@ -274,7 +256,7 @@ def processLyNames(lyfilenames, dirpath, rootDir):
                 # TODO? track files that have headers
                 if mutoHdr != None and hdrDict != None:
                     # hdrFiles.add(fname)
-                    print('\nTWO MUTO HEADERS: ', dirpath[len(rootDir):], fname)
+                    print('\nTWO MUTO HEADERS: ', dirpath[len(rootdir):], fname)
 
                 if mutoHdr != None and hdrDict == None:
                     print('muto header: ', fname)
@@ -313,17 +295,17 @@ def processLyNames(lyfilenames, dirpath, rootDir):
         if diffKeys:
             global diffKeysCount
             diffKeysCount += 1
-            print('omit! conflicting data:', dirpath[len(rootDir):], list(diffKeys), '\n')
+            print('omit! conflicting data:', dirpath[len(rootdir):], list(diffKeys), '\n')
             hdrDict['cn-omit'] = 'T'
             hdrDict['cn-omit-reason'] = 'conflicting header data: ' + repr(diffKeys)
 
         global parseOrder
         parseOrder += 1
-        extractData(hdrDict, vsn, notIncludedFiles, dirpath, rootDir, fname)
+        extractData(hdrDict, vsn, notIncludedFiles, dirpath, rootdir, fname)
 
 
-def walkTheTree(rootDir):
-    for dirpath, dirnames, filenames in os.walk(rootDir):
+def walkTheTree(rootdir):
+    for dirpath, dirnames, filenames in os.walk(rootdir):
 
         if filenames != []:
             # get list of all .ly and .ily files in directory
@@ -332,23 +314,23 @@ def walkTheTree(rootDir):
             # if (len(lyfilenames) > 1 and len(lyfilenames) < 15000)
             # or (len(lyfilenames) == 1 and len(dirnames) > 0):
             if lyfilenames != []:
-                # print('M:', dirpath[len(rootDir):], lyfilenames, '\n')
-                # print('G:', dirpath[len(rootDir):], ": greater than one file")
+                # print('M:', dirpath[len(rootdir):], lyfilenames, '\n')
+                # print('G:', dirpath[len(rootdir):], ": greater than one file")
 
                 if dirnames == []:
                     # lypaths = createFullPaths(dirpath, lyfilenames)
-                    processLyNames(lyfilenames, dirpath, rootDir)
+                    processLyNames(lyfilenames, dirpath, rootdir)
                 else:
                     global subdirectorySkips
                     subdirectorySkips += 1
-                    # print('skip! subdirectories:', dirpath[len(rootDir):], dirnames, '\n')
+                    # print('skip! subdirectories:', dirpath[len(rootdir):], dirnames, '\n')
                     # lypaths = getAllDirLyPaths(dirpath)
                     # clear dirnames to prevent os.walk from going deeper
                     # we have to do it like this, delete in place:
                     dirnames.clear()
 
 
-walkTheTree(rootDir)
+walkTheTree(args.rootdir)
 
 print('LilyPond files parsed, data gathered.\n  Total works:', totalWorks,
     '\n  diffKeysCount:', diffKeysCount, '\n  subdirectorySkips:', subdirectorySkips)
@@ -356,51 +338,73 @@ print('LilyPond files parsed, data gathered.\n  Total works:', totalWorks,
 
 # GET OLD META DATA, MERGE IT IN, AND MARK NEW ITEMS
 
-# if 'y' == input('Merge in meta data from previous CSV file and mark new items as new? (type y)'):
-if args.csv_previous:
-    oldMetaData = {}
+def merge_csv_data(old_csv, new_csv_data, id_field_name):
+    """ Merge data from previous csv and mark which items are new.
+        old_csv (string) is the path to the previous csv file
+        new_csv_data (list) data destined for the new csv file
+        id_field_name (string) key for the id value for items in new_csv_data
+        returns (list) merged data """
 
-    with open(oldCSVfile, newline='') as oldCSVread:
-        reader = csv.DictReader(oldCSVread)
+    # get old meta data
+    old_meta_data = {}
+
+    with open(old_csv, newline='') as old_csv_read:
+        reader = csv.DictReader(old_csv_read)
         for row in reader:
-            id = int(row['mutopia-id'])
+            item_id = int(row[id_field_name])
 
             if row['new?'] == 'T':
-                print('\nOOPS! - There is an item marked as NEW in the OLD csv file... ID: ' + str(id))
+                print('\nOOPS! - There is an item marked as NEW in the OLD csv file... ID: ' + str(item_id))
 
-            oldMetaData[id] = {
+            old_meta_data[item_id] = {
                 'omit?': row['omit?'],
                 'omit-reason': row['omit-reason'],
                 'new?': row['new?'],
                 'error-status?': row['error-status?']
             }
 
-    oldTotal = len(oldMetaData)
+    # merge old meta data into new data and mark new items as new
+    # the meta data fields should be empty in the new data, so nothing is overwritten
+    old_total = len(old_meta_data)
+    new_total = len(new_csv_data)
+    merged_csv_data = []
 
-    for row in preCsvData:
-        id = int(row['mutopia-id'])
-        if id in oldMetaData:
-            row.update(oldMetaData[id])
-            # we remove it from oldMetaData to identify any orphaned works
-            del oldMetaData[id]
+    for item in new_csv_data:
+        # note: item is a dict so it is appended by reference not by value
+        merged_csv_data.append(item)
+        item_id = int(item[id_field_name])
+
+        if item_id in old_meta_data:
+            merged_csv_data[-1].update(old_meta_data[item_id])
+            # remove the item from old_meta_data so we can identify any orphaned works
+            del old_meta_data[item_id]
         else:
-            row['new?'] = 'T'
+            merged_csv_data[-1]['new'] = 'T'
 
-    print('\n' + str(oldTotal), 'Works in previous CSV file.')
-    print(totalWorks, 'Works in current CSV file.')
-    print(str(int(totalWorks) - oldTotal), 'Total new works.\n')
+    print('\n' + str(old_total), 'Works in previous CSV file.')
+    print(new_total, 'Works in current CSV file.')
+    print(str(new_total - old_total), 'Total new works.\n')
 
-    if len(oldMetaData) > 0:
-        print("Orphaned works that were in previous CSV file but were not in from-repo CSV file:", sorted(oldMetaData.keys()))
+    if len(old_meta_data) > 0:
+        print("Orphaned works that were in previous CSV file but were not in current CSV file:", sorted(old_meta_data.keys()))
     else:
-        print("There were no orphaned works, all items in old CSV are in new CSV.")
+        print("There were no orphaned works, all items in previous CSV are in current CSV.")
+
+    return merged_csv_data
+
+
+final_csv_data = []
+if args.csv_previous:
+    final_csv_data = merge_csv_data(args.csv_previous, preCsvData, 'mutopia-id')
+else:
+    final_csv_data = preCsvData
 
 
 # GENERATE CSV FILE
 
-with open(fromRepoCSVfile, 'w') as csvfile:
+with open(args.csv_output, 'w') as csvfile:
     writer = csv.DictWriter(csvfile, fieldnames=csvKeys)
     writer.writeheader()
-    for line in preCsvData:
+    for line in final_csv_data:
         writer.writerow(line)
-    print('CSV file created: ' + fromRepoCSVfile)
+    print('CSV file created: ' + args.csv_output)
