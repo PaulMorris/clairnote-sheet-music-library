@@ -109,7 +109,7 @@ def header_data_from_string(filestring):
     return fdata
 
 
-def extractData(fdata, vsn, notIncludedFiles, dirpath, rootdir, fname):
+def extractData(fdata, vsn, not_included_files, dirpath, rootdir, fname):
 
     # use separate 'cn-' fields so we can see what's going on in the .ly files
     fdata['cn-title'] = fdata['mutopiatitle'] or fdata['title']
@@ -132,7 +132,7 @@ def extractData(fdata, vsn, notIncludedFiles, dirpath, rootdir, fname):
 
     fdata['ly-version'] = vsn
 
-    fdata['filename'] = ',,, '.join(list(notIncludedFiles))
+    fdata['filename'] = ',,, '.join(list(not_included_files))
 
     # strip slash on the left for good measure, for tests etc.
     fdata['path'] = dirpath[len(rootdir):].lstrip(os.path.sep)
@@ -234,7 +234,7 @@ def get_header_data(lyfilenames, dirpath):
                 header['mutopia-id'] = ''
 
             # merge this file's header fields into header_data
-            # keys of inconsistent values are stored
+            # the keys of inconsistent values are stored
             irrelevant_conflicts = ['footer', 'filename', 'source']
             for k, v in header.items():
 
@@ -257,6 +257,17 @@ def get_header_data(lyfilenames, dirpath):
             '''
     return header_data, inconsistent_keys
 
+def check_for_clairnote_code(files, dirpath):
+    result = set()
+    for fname in files:
+        with open(os.path.join(dirpath, fname), 'r') as f:
+            c = clairnote_code_regex.search(f.read())
+            if c:
+                result.add(True)
+            else:
+                result.add(False)
+    return result
+
 def processLyNames(lyfilenames, dirpath, rootdir):
 
     version = get_version(lyfilenames, dirpath)
@@ -270,19 +281,15 @@ def processLyNames(lyfilenames, dirpath, rootdir):
         included_files = get_included_files(lyfilenames, dirpath)
         hdrDict, diffKeys = get_header_data(lyfilenames, dirpath)
 
+        # the files that are not included are top level files (ideally just one file)
+        not_included_files = list(set(lyfilenames).difference(included_files))
+
         # print('included: ', included_files)
-        notIncludedFiles = list(set(lyfilenames).difference(included_files))
-        # print('not-included: ', notIncludedFiles)
+        # print('not-included: ', not_included_files)
 
         # check for clairnote-code.ly in top-level files
-        clntSet = set()
-        for fname in notIncludedFiles:
-            with open(dirpath + '/' + fname, 'r') as f:
-                c = clairnote_code_regex.search(f.read())
-                if c:
-                    clntSet.add(True)
-                else:
-                    clntSet.add(False)
+        clntSet = check_for_clairnote_code(not_included_files, dirpath)
+
         if len(clntSet) > 1:
             diffKeys.add('cn-code')
             # TODO: confirm this output is what we want in the CSV file
@@ -308,7 +315,7 @@ def processLyNames(lyfilenames, dirpath, rootdir):
 
         global parseOrder
         parseOrder += 1
-        extractData(hdrDict, version, notIncludedFiles, dirpath, rootdir, fname)
+        extractData(hdrDict, version, not_included_files, dirpath, rootdir, fname)
 
 
 def walk_the_tree(rootdir):
