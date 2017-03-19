@@ -47,21 +47,21 @@ def balancedBraces(arg):
                 return result
     return "NOPE"
 
-hdr_regex = re.compile("\\\\header.*", re.DOTALL)
-
-quote_regex = re.compile("\".*\"")
-hdr_fields_regex = re.compile("\S.*?=.*?\".*?\"")
-hdr_field_key_regex = re.compile(".*?[\s|=]")
-
-hdr_field_val_regex = re.compile("\".*\"")
-muto_id_regex = re.compile("[0-9]*$")
-footer_regex = re.compile("[0-9][0-9][0-9][0-9]/[0-9][0-9]/[0-9][0-9]")
-
-clairnote_code_regex = re.compile('\\\\include.*?\"clairnote-code.ly\"')
-include_regex = re.compile('\\\\include.*?\".*?\"')
-score_regex = re.compile('\\\\score')
-
-mutopiacomposer_regex = re.compile('.*mutopiacomposer.*', re.DOTALL)
+regexes = {
+    'raw_version': re.compile("\\\\version.*?\".*?\""),
+    'version_digits': re.compile("[0-9]*\.[0-9]*\.[0-9]*"),
+    'header': re.compile("\\\\header.*", re.DOTALL),
+    'quote': re.compile("\".*\""),
+    'header_fields': re.compile("\S.*?=.*?\".*?\""),
+    'header_field_key': re.compile(".*?[\s|=]"),
+    'header_field_val': re.compile("\".*\""),
+    'muto_id': re.compile("[0-9]*$"),
+    'footer': re.compile("[0-9][0-9][0-9][0-9]/[0-9][0-9]/[0-9][0-9]"),
+    'clairnote_code': re.compile('\\\\include.*?\"clairnote-code.ly\"'),
+    'include': re.compile('\\\\include.*?\".*?\"'),
+    'score': re.compile('\\\\score'),
+    'mutopiacomposer': re.compile('.*mutopiacomposer.*', re.DOTALL)
+}
 
 def regexSearch(r, s):
     if s == None:
@@ -75,8 +75,8 @@ def regexSearch(r, s):
 def dictifyHeader (fields):
     result = []
     for f in fields:
-        key = regexSearch(hdr_field_key_regex, f)
-        val = regexSearch(hdr_field_val_regex, f)
+        key = regexSearch(regexes['header_field_key'], f)
+        val = regexSearch(regexes['header_field_val'], f)
         if key == None:
             print('Missing key: ', f)
         elif val == None:
@@ -94,9 +94,9 @@ def vsnGreaterThanOrEqualTo(ref, vsn):
 
 
 def header_data_from_string(filestring):
-    hdr1 = regexSearch(hdr_regex, filestring)
+    hdr1 = regexSearch(regexes['header'], filestring)
     hdr2 = balancedBraces(hdr1)
-    hdr3 = hdr_fields_regex.findall(hdr2)
+    hdr3 = regexes['header_fields'].findall(hdr2)
     hdr4 = dictifyHeader(hdr3)
     row = {}
     for key in csvKeys:
@@ -106,11 +106,11 @@ def header_data_from_string(filestring):
 """
 # unused
 def extractMultiData(filestring, parseOrder, fname):
-    incs = include_regex.findall(filestring)
+    incs = regexes['include'].findall(filestring)
     incs2 = []
     for i in incs:
-        incs2.append(regexSearch(quote_regex, i))
-    scrs = score_regex.findall(filestring)
+        incs2.append(regexSearch(regexes['quote'], i))
+    scrs = regexes['score'].findall(filestring)
     print(fname, scrs, incs2)
 """
 
@@ -136,24 +136,22 @@ def getAllDirLyPaths(rootdir):
 
 def get_version(lyfilenames, dirpath):
     """ Returns the first version found in a list of ly files. """
-    raw_vsn_regex = re.compile("\\\\version.*?\".*?\"")
-    vsn_regex_digits = re.compile("[0-9]*\.[0-9]*\.[0-9]*")
     vsn = None
     for name in lyfilenames:
         with open(os.path.join(dirpath, name), 'r') as f:
             # go through file line by line until we get the version
             for line in f:
-                raw_vsn = regexSearch(raw_vsn_regex, line)
-                vsn = regexSearch(vsn_regex_digits, raw_vsn)
+                raw_vsn = regexSearch(regexes['raw_version'], line)
+                vsn = regexSearch(regexes['version_digits'], raw_vsn)
                 if vsn != None: break
         if vsn != None: break
     return vsn
 
 def included_files_from_string(filestring):
-    incs = include_regex.findall(filestring)
+    incs = regexes['include'].findall(filestring)
     incs2 = []
     for i in incs:
-        x = regexSearch(quote_regex, i)
+        x = regexSearch(regexes['quote'], i)
         incs2.append(x[1:-1])
     return incs2
 
@@ -175,7 +173,7 @@ def get_header_data(lyfilenames, dirpath):
             header = header_data_from_string(f.read())
 
             # extract mutopia-id from footer
-            header['mutopia-id'] = regexSearch(muto_id_regex, header['footer'])
+            header['mutopia-id'] = regexSearch(regexes['muto_id'], header['footer'])
             if header['mutopia-id'] == None:
                 header['mutopia-id'] = ''
 
@@ -207,7 +205,7 @@ def check_for_clairnote_code(files, dirpath):
     result = set()
     for fname in files:
         with open(os.path.join(dirpath, fname), 'r') as f:
-            c = clairnote_code_regex.search(f.read())
+            c = regexes['clairnote_code'].search(f.read())
             if c:
                 result.add(True)
             else:
@@ -297,9 +295,9 @@ def process_ly_names(lyfilenames, dirpath, rootdir):
 
     # not currently used
     # ftr = row['footer']
-    # row['mutopia-id'] = regexSearch(muto_id_regex, ftr)
+    # row['mutopia-id'] = regexSearch(regexes['muto_id'], ftr)
     # strip footer to just the date
-    # row['footer'] = regexSearch(footer_regex, ftr)
+    # row['footer'] = regexSearch(regexes['footer'], ftr)
     # remove footer
     # row.pop('footer', False)
 
