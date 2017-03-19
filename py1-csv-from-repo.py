@@ -19,11 +19,6 @@ csvKeys = ['mutopia-id', 'parse-order', 'omit?', 'omit-reason', 'new?', 'error-s
     'footer', 'composer', 'mutopiatitle', 'title', 'mutopiaopus', 'opus', 'mutopiastyle', 'style',
     'mutopiainstrument', 'instrument', 'mutopiapoet', 'poet', 'mutopialicense', 'license']
 
-preCsvData = []
-parseOrder = 1
-totalWorks = 0
-diffKeysCount = 0
-
 def balancedBraces(arg):
     '''
     takes a string starting with "\header" and ending
@@ -109,7 +104,7 @@ def header_data_from_string(filestring):
     return fdata
 
 
-def extractData(fdata, vsn, not_included_files, dirpath, rootdir, fname):
+def extractData(fdata, vsn, not_included_files, dirpath, rootdir):
 
     # use separate 'cn-' fields so we can see what's going on in the .ly files
     fdata['cn-title'] = fdata['mutopiatitle'] or fdata['title']
@@ -139,14 +134,6 @@ def extractData(fdata, vsn, not_included_files, dirpath, rootdir, fname):
 
     print(dirpath, "   ", rootdir, "   ", fdata['path'])
 
-    # store the file's 'last-modified' time stamp
-    # TODO: how to handle for multi ly files?
-    fdata['mtime'] = os.path.getmtime(dirpath + '/' + fname)
-
-    # not used currently, but kept for future reference
-    # ctime = last time a file's metadata was changed (owner, permissions, etc.)
-    # fdata['ctime'] = os.path.getctime(dirpath + '/' + fname)
-
     # not currently used
     # ftr = fdata['footer']
     # fdata['mutopia-id'] = regexSearch(muto_id_regex, ftr)
@@ -155,11 +142,11 @@ def extractData(fdata, vsn, not_included_files, dirpath, rootdir, fname):
     # remove footer
     # fdata.pop('footer', False)
 
-    fdata['parse-order'] = parseOrder
-    preCsvData.append(fdata)
+    return fdata
 
 
-
+"""
+# unused
 def extractMultiData(filestring, parseOrder, fname):
     incs = include_regex.findall(filestring)
     incs2 = []
@@ -167,6 +154,7 @@ def extractMultiData(filestring, parseOrder, fname):
         incs2.append(regexSearch(quote_regex, i))
     scrs = score_regex.findall(filestring)
     print(fname, scrs, incs2)
+"""
 
 def getLyFilenames(filenames):
     lynames = []
@@ -268,60 +256,67 @@ def check_for_clairnote_code(files, dirpath):
                 result.add(False)
     return result
 
-def processLyNames(lyfilenames, dirpath, rootdir):
+def get_most_recent_mtime(files, dirpath):
+    """ Return the most recent mtime for a list of files in a directory """
+    most_recent = None
+    for fname in files:
+        mtime = os.path.getmtime(os.path.join(dirpath, fname))
+        if most_recent == None or most_recent < mtime:
+            most_recent = mtime
+    return most_recent
 
-    version = get_version(lyfilenames, dirpath)
+    # not used currently, but kept for future reference
+    # ctime = last time a file's metadata was changed (owner, permissions, etc.)
+    # fdata['ctime'] = os.path.getctime(dirpath + '/' + fname)
+
+def process_ly_names(lyfilenames, dirpath, rootdir):
 
     # GET HEADER DATA ETC
-    if version != None and vsnGreaterThanOrEqualTo(args.earliest_ly_version, version):
-        global totalWorks
-        totalWorks += 1
-        # print('\n\n', version, dirpath[len(rootdir):], '\n', lyfilenames)
+    # print('\n\n', version, dirpath[len(rootdir):], '\n', lyfilenames)
 
-        included_files = get_included_files(lyfilenames, dirpath)
-        hdrDict, diffKeys = get_header_data(lyfilenames, dirpath)
+    included_files = get_included_files(lyfilenames, dirpath)
+    header_data, diff_keys = get_header_data(lyfilenames, dirpath)
 
-        # the files that are not included are top level files (ideally just one file)
-        not_included_files = list(set(lyfilenames).difference(included_files))
+    # the files that are not included are top level files (ideally just one file)
+    not_included_files = list(set(lyfilenames).difference(included_files))
 
-        # print('included: ', included_files)
-        # print('not-included: ', not_included_files)
+    # print('included: ', included_files)
+    # print('not-included: ', not_included_files)
 
-        # check for clairnote-code.ly in top-level files
-        clntSet = check_for_clairnote_code(not_included_files, dirpath)
+    # check for clairnote-code.ly in top-level files
+    clntSet = check_for_clairnote_code(not_included_files, dirpath)
 
-        if len(clntSet) > 1:
-            diffKeys.add('cn-code')
-            # TODO: confirm this output is what we want in the CSV file
-            hdrDict['cn-code'] = list(clntSet)
-        else:
-            hdrDict['cn-code'] = list(clntSet)[0]
+    if len(clntSet) > 1:
+        diff_keys.add('cn-code')
+        # TODO: confirm this output is what we want in the CSV file
+        header_data['cn-code'] = list(clntSet)
+    else:
+        header_data['cn-code'] = list(clntSet)[0]
 
-        # Handle conflicting data in different files
-        # first prune irrelevant conflicts
-        # some are handled earlier, not even added to diffKeys
-        if diffKeys:
-            for k in ['composer', 'title', 'instrument', 'style', 'license', 'opus', 'poet']:
-                if k in diffKeys and hdrDict['mutopia' + k] != '':
-                    diffKeys.discard(k)
+    # Handle conflicting data in different files
+    # first prune irrelevant conflicts
+    # some are handled earlier, not even added to diff_keys
+    if diff_keys:
+        for k in ['composer', 'title', 'instrument', 'style', 'license', 'opus', 'poet']:
+            if k in diff_keys and header_data['mutopia' + k] != '':
+                diff_keys.discard(k)
 
-        # second deal with remaining relevant conflicts
-        if diffKeys:
-            global diffKeysCount
-            diffKeysCount += 1
-            print('omit! conflicting data:', dirpath[len(rootdir):], list(diffKeys), '\n')
-            hdrDict['cn-omit'] = 'T'
-            hdrDict['cn-omit-reason'] = 'conflicting header data: ' + repr(diffKeys)
+    # second deal with remaining relevant conflicts
+    if diff_keys:
+        print('omit! conflicting data:', dirpath[len(rootdir):], list(diff_keys), '\n')
+        header_data['cn-omit'] = 'T'
+        header_data['cn-omit-reason'] = 'conflicting header data: ' + repr(diff_keys)
 
-        global parseOrder
-        parseOrder += 1
-        extractData(hdrDict, version, not_included_files, dirpath, rootdir, fname)
-
+    return header_data, not_included_files, diff_keys
 
 def walk_the_tree(rootdir):
     """ Walk through rootdir and subdirectories parsing data from ly files.
         rootdir (string) is path to the root directory """
+    csv_data = []
+    parse_order = 0
+    diff_keys_count = 0
     subdir_skips = 0
+
     for dirpath, dirnames, filenames in os.walk(rootdir):
 
         if filenames != []:
@@ -330,7 +325,21 @@ def walk_the_tree(rootdir):
 
             if lyfilenames != []:
                 if dirnames == []:
-                    processLyNames(lyfilenames, dirpath, rootdir)
+                    version = get_version(lyfilenames, dirpath)
+
+                    if version != None and vsnGreaterThanOrEqualTo(args.earliest_ly_version, version):
+
+                        header_data, not_included_files, diff_keys = process_ly_names(lyfilenames, dirpath, rootdir)
+
+                        header_data['mtime'] = get_most_recent_mtime(lyfilenames, dirpath)
+
+                        row = extractData(header_data, version, not_included_files, dirpath, rootdir)
+                        parse_order += 1
+                        row['parse-order'] = parse_order
+                        csv_data.append(row)
+                        if (len(diff_keys) > 0):
+                            diff_keys_count += 1
+
                 else:
                     subdir_skips += 1
                     # print('skip! subdirectories:', dirpath[len(rootdir):], dirnames, '\n')
@@ -340,12 +349,14 @@ def walk_the_tree(rootdir):
                     dirnames.clear()
 
     print('LilyPond files parsed, data gathered.',
-        '\n  Total works:', totalWorks,
-        '\n  diffKeysCount:', diffKeysCount,
+        '\n  Total works:', parse_order,
+        '\n  diff_keys_count:', diff_keys_count,
         '\n  subdir_skips:', subdir_skips)
 
+    return csv_data
 
-walk_the_tree(args.rootdir)
+
+csv_data = walk_the_tree(args.rootdir)
 
 # GET OLD META DATA, MERGE IT IN, AND MARK NEW ITEMS
 
@@ -406,9 +417,9 @@ def merge_csv_data(old_csv, new_csv_data, id_field_name):
 
 final_csv_data = None
 if args.csv_previous:
-    final_csv_data = merge_csv_data(args.csv_previous, preCsvData, 'mutopia-id')
+    final_csv_data = merge_csv_data(args.csv_previous, csv_data, 'mutopia-id')
 else:
-    final_csv_data = preCsvData
+    final_csv_data = csv_data
 
 
 # GENERATE CSV FILE
