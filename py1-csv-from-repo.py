@@ -23,8 +23,6 @@ preCsvData = []
 parseOrder = 1
 totalWorks = 0
 diffKeysCount = 0
-subdirectorySkips = 0
-
 
 def balancedBraces(arg):
     '''
@@ -54,9 +52,6 @@ def balancedBraces(arg):
                 return result
     return "NOPE"
 
-
-raw_vsn_regex = re.compile("\\\\version.*?\".*?\"")
-vsn_regex_digits = re.compile("[0-9]*\.[0-9]*\.[0-9]*")
 hdr_regex = re.compile("\\\\header.*", re.DOTALL)
 
 quote_regex = re.compile("\".*\"")
@@ -204,25 +199,30 @@ def getAllDirLyPaths(rootdir):
         lypaths.append(createFullPaths(dirpath, lyfiles))
     return lypaths
 
-
-def processLyNames(lyfilenames, dirpath, rootdir):
-    # GET THE VERSION
+def get_version(lyfilenames, dirpath):
+    """ Returns the first version found in a list of ly files. """
+    raw_vsn_regex = re.compile("\\\\version.*?\".*?\"")
+    vsn_regex_digits = re.compile("[0-9]*\.[0-9]*\.[0-9]*")
     vsn = None
-    for fname in lyfilenames:
-
-        # use os.path.join here?
-        with open(dirpath + "/" + fname, 'r') as f:
+    for name in lyfilenames:
+        with open(os.path.join(dirpath, name), 'r') as f:
             # go through file line by line until we get the version
             for line in f:
-                vsn = regexSearch(vsn_regex_digits, regexSearch(raw_vsn_regex, line))
+                raw_vsn = regexSearch(raw_vsn_regex, line)
+                vsn = regexSearch(vsn_regex_digits, raw_vsn)
                 if vsn != None: break
         if vsn != None: break
+    return vsn
+
+def processLyNames(lyfilenames, dirpath, rootdir):
+
+    version = get_version(lyfilenames, dirpath)
 
     # GET HEADER DATA ETC
-    if vsn != None and vsnGreaterThanOrEqualTo(args.earliest_ly_version, vsn):
+    if version != None and vsnGreaterThanOrEqualTo(args.earliest_ly_version, version):
         global totalWorks
         totalWorks += 1
-        # print('\n\n', vsn, dirpath[len(rootdir):], '\n', lyfilenames)
+        # print('\n\n', version, dirpath[len(rootdir):], '\n', lyfilenames)
 
         # get list of included files
         includedFiles = set()
@@ -230,7 +230,7 @@ def processLyNames(lyfilenames, dirpath, rootdir):
         diffKeys = set()
 
         for fname in lyfilenames:
-            with open(dirpath + '/' + fname, 'r') as f:
+            with open(os.path.join(dirpath, fname), 'r') as f:
                 incs = getIncludedFiles(f.read())
                 for i in incs:
                     includedFiles.add(i)
@@ -301,40 +301,37 @@ def processLyNames(lyfilenames, dirpath, rootdir):
 
         global parseOrder
         parseOrder += 1
-        extractData(hdrDict, vsn, notIncludedFiles, dirpath, rootdir, fname)
+        extractData(hdrDict, version, notIncludedFiles, dirpath, rootdir, fname)
 
 
-def walkTheTree(rootdir):
+def walk_the_tree(rootdir):
+    """ Walk through rootdir and subdirectories parsing data from ly files.
+        rootdir (string) is path to the root directory """
+    subdir_skips = 0
     for dirpath, dirnames, filenames in os.walk(rootdir):
 
         if filenames != []:
             # get list of all .ly and .ily files in directory
             lyfilenames = getLyFilenames(filenames)
 
-            # if (len(lyfilenames) > 1 and len(lyfilenames) < 15000)
-            # or (len(lyfilenames) == 1 and len(dirnames) > 0):
             if lyfilenames != []:
-                # print('M:', dirpath[len(rootdir):], lyfilenames, '\n')
-                # print('G:', dirpath[len(rootdir):], ": greater than one file")
-
                 if dirnames == []:
-                    # lypaths = createFullPaths(dirpath, lyfilenames)
                     processLyNames(lyfilenames, dirpath, rootdir)
                 else:
-                    global subdirectorySkips
-                    subdirectorySkips += 1
+                    subdir_skips += 1
                     # print('skip! subdirectories:', dirpath[len(rootdir):], dirnames, '\n')
-                    # lypaths = getAllDirLyPaths(dirpath)
+
                     # clear dirnames to prevent os.walk from going deeper
                     # we have to do it like this, delete in place:
                     dirnames.clear()
 
+    print('LilyPond files parsed, data gathered.',
+        '\n  Total works:', totalWorks,
+        '\n  diffKeysCount:', diffKeysCount,
+        '\n  subdir_skips:', subdir_skips)
 
-walkTheTree(args.rootdir)
 
-print('LilyPond files parsed, data gathered.\n  Total works:', totalWorks,
-    '\n  diffKeysCount:', diffKeysCount, '\n  subdirectorySkips:', subdirectorySkips)
-
+walk_the_tree(args.rootdir)
 
 # GET OLD META DATA, MERGE IT IN, AND MARK NEW ITEMS
 
@@ -393,7 +390,7 @@ def merge_csv_data(old_csv, new_csv_data, id_field_name):
     return merged_csv_data
 
 
-final_csv_data = []
+final_csv_data = None
 if args.csv_previous:
     final_csv_data = merge_csv_data(args.csv_previous, preCsvData, 'mutopia-id')
 else:
