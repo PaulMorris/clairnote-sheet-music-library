@@ -70,28 +70,6 @@ def regex_search(r, s):
     else:
         return a.group()
 
-def dictify_header(fields):
-    result = []
-    for f in fields:
-        key = regex_search(regexes['header_field_key'], f)
-        val = regex_search(regexes['header_field_val'], f)
-        if key == None:
-            print('Missing key: ', f)
-        elif val == None:
-            print('Missing val: ', f)
-        result.append(( key[0:-1], val[1:-1] ))
-    return dict(result)
-
-def header_data_from_string(filestring):
-    hdr1 = regex_search(regexes['header'], filestring)
-    hdr2 = balanced_brackets(hdr1)
-    hdr3 = regexes['header_fields'].findall(hdr2)
-    hdr4 = dictify_header(hdr3)
-    row = {}
-    for key in csv_keys:
-        row[key] = hdr4.pop(key, '')
-    return row
-
 def vsn_greater_than_or_equals(ref, vsn):
     vsnList = vsn.split('.')
     refList = ref.split('.')
@@ -137,17 +115,34 @@ def get_included_files(lyfilenames, dirpath):
                 included_files.add(i)
     return included_files
 
+def dictify_header(fields):
+    result = []
+    for f in fields:
+        key = regex_search(regexes['header_field_key'], f)
+        val = regex_search(regexes['header_field_val'], f)
+        if key == None:
+            print('Missing key: ', f)
+        elif val == None:
+            print('Missing val: ', f)
+        result.append(( key[0:-1], val[1:-1] ))
+    return dict(result)
+
+def header_data_from_string(filestring):
+    hdr1 = regex_search(regexes['header'], filestring)
+    hdr2 = balanced_brackets(hdr1)
+    hdr3 = regexes['header_fields'].findall(hdr2)
+    hdr4 = dictify_header(hdr3)
+    row = {}
+    for key in csv_keys:
+        row[key] = hdr4.pop(key, '')
+    return row
+
 def get_header_data(lyfilenames, dirpath):
     header_data = {}
     inconsistent_keys = set()
     for fname in lyfilenames:
         with open(os.path.join(dirpath, fname), 'r') as f:
             header = header_data_from_string(f.read())
-
-            # extract mutopia-id from footer
-            header['mutopia-id'] = regex_search(regexes['muto_id'], header['footer'])
-            if header['mutopia-id'] == None:
-                header['mutopia-id'] = ''
 
             # merge this file's header fields into header_data
             # the keys of inconsistent values are stored
@@ -184,6 +179,18 @@ def check_for_clairnote_code(files, dirpath):
                 result.add(False)
     return result
 
+def get_most_recent_mtime(files, dirpath):
+    """ Return the most recent mtime for a list of files in a directory """
+    most_recent = None
+    for fname in files:
+        mtime = os.path.getmtime(os.path.join(dirpath, fname))
+        if most_recent == None or most_recent < mtime:
+            most_recent = mtime
+    return most_recent
+    # not used currently, but kept for future reference
+    # ctime = last time a file's metadata was changed (owner, permissions, etc.)
+    # row['ctime'] = os.path.getctime(os.path.join(dirpath, fname))
+
 def add_cn_fields(row):
     # use separate 'cn-' fields so we can see what's going on in the .ly files
     row['cn-title'] = row['mutopiatitle'] or row['title']
@@ -205,18 +212,6 @@ def add_license_data(row):
     row['license-type'] = license_lookup.get(row['cn-license'], ['', ''])[0]
     row['license-vsn'] = license_lookup.get(row['cn-license'], ['', 0])[1]
     return row
-
-def get_most_recent_mtime(files, dirpath):
-    """ Return the most recent mtime for a list of files in a directory """
-    most_recent = None
-    for fname in files:
-        mtime = os.path.getmtime(os.path.join(dirpath, fname))
-        if most_recent == None or most_recent < mtime:
-            most_recent = mtime
-    return most_recent
-    # not used currently, but kept for future reference
-    # ctime = last time a file's metadata was changed (owner, permissions, etc.)
-    # row['ctime'] = os.path.getctime(os.path.join(dirpath, fname))
 
 def process_ly_names(lyfilenames, dirpath, rootdir):
 
@@ -254,6 +249,9 @@ def process_ly_names(lyfilenames, dirpath, rootdir):
         print('omit! conflicting data:', dirpath[len(rootdir):], list(conflicting_data), '\n')
         row['cn-omit'] = 'T'
         row['cn-omit-reason'] = 'conflicting header data: ' + repr(conflicting_data)
+
+    # extract mutopia-id from footer field
+    row['mutopia-id'] = regex_search(regexes['muto_id'], row['footer']) or ''
 
     row = add_cn_fields(row)
     row = add_license_data(row)
