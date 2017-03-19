@@ -98,8 +98,8 @@ def vsnGreaterThanOrEqualTo(ref, vsn):
     return vsnNum >= refNum
 
 
-def getMutopiaHeader(filetext):
-    hdr1 = regexSearch(hdr_regex, filetext)
+def header_data_from_string(filestring):
+    hdr1 = regexSearch(hdr_regex, filestring)
     hdr2 = balancedBraces(hdr1)
     hdr3 = hdr_fields_regex.findall(hdr2)
     hdr4 = dictifyHeader(hdr3)
@@ -160,24 +160,13 @@ def extractData(fdata, vsn, notIncludedFiles, dirpath, rootdir, fname):
 
 
 
-def extractMultiData(filetext, parseOrder, fname):
-    incs = include_regex.findall(filetext)
+def extractMultiData(filestring, parseOrder, fname):
+    incs = include_regex.findall(filestring)
     incs2 = []
     for i in incs:
         incs2.append(regexSearch(quote_regex, i))
-    scrs = score_regex.findall(filetext)
+    scrs = score_regex.findall(filestring)
     print(fname, scrs, incs2)
-
-
-def getIncludedFiles(filetext):
-    incs = include_regex.findall(filetext)
-    incs2 = []
-    for i in incs:
-        x = regexSearch(quote_regex, i)
-        incs2.append(x[1:-1])
-    return incs2
-
-
 
 def getLyFilenames(filenames):
     lynames = []
@@ -214,6 +203,60 @@ def get_version(lyfilenames, dirpath):
         if vsn != None: break
     return vsn
 
+def included_files_from_string(filestring):
+    incs = include_regex.findall(filestring)
+    incs2 = []
+    for i in incs:
+        x = regexSearch(quote_regex, i)
+        incs2.append(x[1:-1])
+    return incs2
+
+def get_included_files(lyfilenames, dirpath):
+    # get list of included files
+    included_files = set()
+    for fname in lyfilenames:
+        with open(os.path.join(dirpath, fname), 'r') as f:
+            incs = included_files_from_string(f.read())
+            for i in incs:
+                included_files.add(i)
+    return included_files
+
+def get_header_data(lyfilenames, dirpath):
+    header_data = {}
+    inconsistent_keys = set()
+    for fname in lyfilenames:
+        with open(os.path.join(dirpath, fname), 'r') as f:
+            header = header_data_from_string(f.read())
+
+            # extract mutopia-id from footer
+            header['mutopia-id'] = regexSearch(muto_id_regex, header['footer'])
+            if header['mutopia-id'] == None:
+                header['mutopia-id'] = ''
+
+            # merge this file's header fields into header_data
+            # keys of inconsistent values are stored
+            irrelevant_conflicts = ['footer', 'filename', 'source']
+            for k, v in header.items():
+
+                if k not in header_data or header_data[k] == '':
+                    header_data[k] = v
+
+                elif v != '' and header_data[k] != v:
+                    header_data[k] += ', ' + v
+                    if k not in irrelevant_conflicts:
+                        inconsistent_keys.add(k)
+            '''
+            # TODO: ? track files that have headers
+            if mutoHdr != None and header_data != None:
+                # hdrFiles.add(fname)
+                print('\nTWO MUTO HEADERS: ', dirpath[len(rootdir):], fname)
+
+            if mutoHdr != None and header_data == None:
+                print('muto header: ', fname)
+                header_data = mutoHdr
+            '''
+    return header_data, inconsistent_keys
+
 def processLyNames(lyfilenames, dirpath, rootdir):
 
     version = get_version(lyfilenames, dirpath)
@@ -224,47 +267,11 @@ def processLyNames(lyfilenames, dirpath, rootdir):
         totalWorks += 1
         # print('\n\n', version, dirpath[len(rootdir):], '\n', lyfilenames)
 
-        # get list of included files
-        includedFiles = set()
-        hdrDict = {}
-        diffKeys = set()
+        included_files = get_included_files(lyfilenames, dirpath)
+        hdrDict, diffKeys = get_header_data(lyfilenames, dirpath)
 
-        for fname in lyfilenames:
-            with open(os.path.join(dirpath, fname), 'r') as f:
-                incs = getIncludedFiles(f.read())
-                for i in incs:
-                    includedFiles.add(i)
-
-                f.seek(0)
-                hdr = getMutopiaHeader(f.read())
-
-                # extract mutopia-id from footer
-                hdr['mutopia-id'] = regexSearch(muto_id_regex, hdr['footer'])
-                if hdr['mutopia-id'] == None:
-                    hdr['mutopia-id'] = ''
-
-                someIrrelevantConflicts = ['footer', 'filename', 'source']
-                for k, v in hdr.items():
-                    if k not in hdrDict or hdrDict[k] == '':
-                        hdrDict[k] = v
-                    elif v != '' and hdrDict[k] != v:
-                        hdrDict[k] += ', ' + v
-                        if k not in someIrrelevantConflicts:
-                            diffKeys.add(k)
-
-                '''
-                # TODO? track files that have headers
-                if mutoHdr != None and hdrDict != None:
-                    # hdrFiles.add(fname)
-                    print('\nTWO MUTO HEADERS: ', dirpath[len(rootdir):], fname)
-
-                if mutoHdr != None and hdrDict == None:
-                    print('muto header: ', fname)
-                    hdrDict = mutoHdr
-                '''
-
-        # print('included: ', includedFiles)
-        notIncludedFiles = list(set(lyfilenames).difference(includedFiles))
+        # print('included: ', included_files)
+        notIncludedFiles = list(set(lyfilenames).difference(included_files))
         # print('not-included: ', notIncludedFiles)
 
         # check for clairnote-code.ly in top-level files
