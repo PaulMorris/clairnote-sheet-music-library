@@ -11,7 +11,7 @@ parser.add_argument("-p", "--csv-previous", help="Path and name of the previous 
 parser.add_argument("-l", "--earliest-ly-version", help="The earliest LilyPond version to include in CSV file") # e.g. '2.14.0'
 args = parser.parse_args()
 
-csvKeys = ['mutopia-id', 'parse-order', 'omit?', 'omit-reason', 'new?', 'error-status?', 'flagged?',
+csv_keys = ['mutopia-id', 'parse-order', 'omit?', 'omit-reason', 'new?', 'error-status?', 'flagged?',
     'cn-code', 'ly-version', 'mutopiacomposer', 'cn-title', 'cn-opus', 'path', 'filename',
     'cn-style', 'cn-instrument',
     'cn-poet', 'license-type', 'license-vsn', 'cn-license', 'mtime',
@@ -19,12 +19,9 @@ csvKeys = ['mutopia-id', 'parse-order', 'omit?', 'omit-reason', 'new?', 'error-s
     'footer', 'composer', 'mutopiatitle', 'title', 'mutopiaopus', 'opus', 'mutopiastyle', 'style',
     'mutopiainstrument', 'instrument', 'mutopiapoet', 'poet', 'mutopialicense', 'license']
 
-def balancedBraces(arg):
-    '''
-    takes a string starting with "\header" and ending
-    at the end of the .ly file.  Returns just the
-    header brackets and contents "{ ... }"
-    '''
+def balanced_brackets(arg):
+    """ Takes a string (e.g. starting with "\header" and ending at the end of
+        the .ly file).  Returns the outermost brackets and their contents "{ ... }" """
     result = ""
     n = 0
     before_first_brace = True
@@ -63,7 +60,8 @@ regexes = {
     'mutopiacomposer': re.compile('.*mutopiacomposer.*', re.DOTALL)
 }
 
-def regexSearch(r, s):
+def regex_search(r, s):
+    """ r is a regex, s is a string to search """
     if s == None:
         return None
     a = r.search(s)
@@ -72,11 +70,11 @@ def regexSearch(r, s):
     else:
         return a.group()
 
-def dictifyHeader (fields):
+def dictify_header(fields):
     result = []
     for f in fields:
-        key = regexSearch(regexes['header_field_key'], f)
-        val = regexSearch(regexes['header_field_val'], f)
+        key = regex_search(regexes['header_field_key'], f)
+        val = regex_search(regexes['header_field_val'], f)
         if key == None:
             print('Missing key: ', f)
         elif val == None:
@@ -84,55 +82,29 @@ def dictifyHeader (fields):
         result.append(( key[0:-1], val[1:-1] ))
     return dict(result)
 
+def header_data_from_string(filestring):
+    hdr1 = regex_search(regexes['header'], filestring)
+    hdr2 = balanced_brackets(hdr1)
+    hdr3 = regexes['header_fields'].findall(hdr2)
+    hdr4 = dictify_header(hdr3)
+    row = {}
+    for key in csv_keys:
+        row[key] = hdr4.pop(key, '')
+    return row
 
-def vsnGreaterThanOrEqualTo(ref, vsn):
+def vsn_greater_than_or_equals(ref, vsn):
     vsnList = vsn.split('.')
     refList = ref.split('.')
     vsnNum = int(vsnList[0]) * 1000000 + int(vsnList[1]) * 1000 + int(vsnList[2])
     refNum = int(refList[0]) * 1000000 + int(refList[1]) * 1000 + int(refList[2])
     return vsnNum >= refNum
 
-
-def header_data_from_string(filestring):
-    hdr1 = regexSearch(regexes['header'], filestring)
-    hdr2 = balancedBraces(hdr1)
-    hdr3 = regexes['header_fields'].findall(hdr2)
-    hdr4 = dictifyHeader(hdr3)
-    row = {}
-    for key in csvKeys:
-        row[key] = hdr4.pop(key, '')
-    return row
-
-"""
-# unused
-def extractMultiData(filestring, parseOrder, fname):
-    incs = regexes['include'].findall(filestring)
-    incs2 = []
-    for i in incs:
-        incs2.append(regexSearch(regexes['quote'], i))
-    scrs = regexes['score'].findall(filestring)
-    print(fname, scrs, incs2)
-"""
-
-def getLyFilenames(filenames):
+def get_ly_filenames(filenames):
     lynames = []
     for f in filenames:
         if f[-3:] == '.ly' or f[-4:] == '.ily' or f[-4:] == '.lyi':
             lynames.append(f)
     return lynames
-
-def createFullPaths(dirpath, filenames):
-    paths = []
-    for f in filenames:
-        paths.append(os.path.join(dirpath, f))
-    return paths
-
-def getAllDirLyPaths(rootdir):
-    lypaths = []
-    for dirpath, dirnames, filenames in os.walk(rootdir):
-        lyfiles = getLyFilenames(filenames)
-        lypaths.append(createFullPaths(dirpath, lyfiles))
-    return lypaths
 
 def get_version(lyfilenames, dirpath):
     """ Returns the first version found in a list of ly files. """
@@ -141,8 +113,8 @@ def get_version(lyfilenames, dirpath):
         with open(os.path.join(dirpath, name), 'r') as f:
             # go through file line by line until we get the version
             for line in f:
-                raw_vsn = regexSearch(regexes['raw_version'], line)
-                vsn = regexSearch(regexes['version_digits'], raw_vsn)
+                raw_vsn = regex_search(regexes['raw_version'], line)
+                vsn = regex_search(regexes['version_digits'], raw_vsn)
                 if vsn != None: break
         if vsn != None: break
     return vsn
@@ -151,7 +123,7 @@ def included_files_from_string(filestring):
     incs = regexes['include'].findall(filestring)
     incs2 = []
     for i in incs:
-        x = regexSearch(regexes['quote'], i)
+        x = regex_search(regexes['quote'], i)
         incs2.append(x[1:-1])
     return incs2
 
@@ -173,7 +145,7 @@ def get_header_data(lyfilenames, dirpath):
             header = header_data_from_string(f.read())
 
             # extract mutopia-id from footer
-            header['mutopia-id'] = regexSearch(regexes['muto_id'], header['footer'])
+            header['mutopia-id'] = regex_search(regexes['muto_id'], header['footer'])
             if header['mutopia-id'] == None:
                 header['mutopia-id'] = ''
 
@@ -223,15 +195,15 @@ def add_cn_fields(row):
     return row
 
 def add_license_data(row):
-    licenseLookup = {
+    license_lookup = {
         'Public Domain': ['pd', 0],
         'Creative Commons Attribution 4.0': ['by', 4],
         'Creative Commons Attribution 3.0': ['by', 3],
         'Creative Commons Attribution-ShareAlike 3.0': ['by-sa', 3],
         'Creative Commons Attribution-ShareAlike 4.0': ['by-sa', 4]
     }
-    row['license-type'] = licenseLookup.get(row['cn-license'], ['', ''])[0]
-    row['license-vsn'] = licenseLookup.get(row['cn-license'], ['', 0])[1]
+    row['license-type'] = license_lookup.get(row['cn-license'], ['', ''])[0]
+    row['license-vsn'] = license_lookup.get(row['cn-license'], ['', 0])[1]
     return row
 
 def get_most_recent_mtime(files, dirpath):
@@ -248,7 +220,6 @@ def get_most_recent_mtime(files, dirpath):
 
 def process_ly_names(lyfilenames, dirpath, rootdir):
 
-    # GET HEADER DATA ETC
     # print('\n\n', version, dirpath[len(rootdir):], '\n', lyfilenames)
 
     row, conflicting_data = get_header_data(lyfilenames, dirpath)
@@ -295,9 +266,9 @@ def process_ly_names(lyfilenames, dirpath, rootdir):
 
     # not currently used
     # ftr = row['footer']
-    # row['mutopia-id'] = regexSearch(regexes['muto_id'], ftr)
+    # row['mutopia-id'] = regex_search(regexes['muto_id'], ftr)
     # strip footer to just the date
-    # row['footer'] = regexSearch(regexes['footer'], ftr)
+    # row['footer'] = regex_search(regexes['footer'], ftr)
     # remove footer
     # row.pop('footer', False)
 
@@ -311,20 +282,20 @@ def walk_the_tree(rootdir):
         rootdir (string) is path to the root directory """
     csv_data = []
     parse_order = 0
-    diff_keys_count = 0
+    conflicting_data_count = 0
     subdir_skips = 0
 
     for dirpath, dirnames, filenames in os.walk(rootdir):
 
         if filenames != []:
             # get list of all .ly and .ily files in directory
-            lyfilenames = getLyFilenames(filenames)
+            lyfilenames = get_ly_filenames(filenames)
 
             if lyfilenames != []:
                 if dirnames == []:
                     version = get_version(lyfilenames, dirpath)
 
-                    if version != None and vsnGreaterThanOrEqualTo(args.earliest_ly_version, version):
+                    if version != None and vsn_greater_than_or_equals(args.earliest_ly_version, version):
 
                         row, conflicting_data = process_ly_names(lyfilenames, dirpath, rootdir)
                         row['ly-version'] = version
@@ -332,8 +303,9 @@ def walk_the_tree(rootdir):
                         parse_order += 1
                         row['parse-order'] = parse_order
                         csv_data.append(row)
+
                         if (len(conflicting_data) > 0):
-                            diff_keys_count += 1
+                            conflicting_data_count += 1
 
                 else:
                     # there are subdirectories and we can't handle them, so skip it.
@@ -345,7 +317,7 @@ def walk_the_tree(rootdir):
 
     print('LilyPond files parsed, data gathered.',
         '\n  Total works:', parse_order,
-        '\n  diff_keys_count:', diff_keys_count,
+        '\n  conflicting_data_count:', conflicting_data_count,
         '\n  subdir_skips:', subdir_skips)
 
     return csv_data
@@ -420,8 +392,33 @@ else:
 # GENERATE CSV FILE
 
 with open(args.csv_output, 'w') as csvfile:
-    writer = csv.DictWriter(csvfile, fieldnames=csvKeys)
+    writer = csv.DictWriter(csvfile, fieldnames=csv_keys)
     writer.writeheader()
     for line in final_csv_data:
         writer.writerow(line)
     print('CSV file created: ' + args.csv_output)
+
+
+# unused functions
+"""
+def create_full_paths(dirpath, filenames):
+    paths = []
+    for f in filenames:
+        paths.append(os.path.join(dirpath, f))
+    return paths
+
+def get_all_dir_ly_paths(rootdir):
+    lypaths = []
+    for dirpath, dirnames, filenames in os.walk(rootdir):
+        lyfiles = get_ly_filenames(filenames)
+        lypaths.append(create_full_paths(dirpath, lyfiles))
+    return lypaths
+
+def extract_multi_data(filestring, parseOrder, fname):
+    incs = regexes['include'].findall(filestring)
+    incs2 = []
+    for i in incs:
+        incs2.append(regex_search(regexes['quote'], i))
+    scrs = regexes['score'].findall(filestring)
+    print(fname, scrs, incs2)
+"""
