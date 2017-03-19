@@ -162,8 +162,8 @@ def get_included_files(lyfilenames, dirpath):
     included_files = set()
     for fname in lyfilenames:
         with open(os.path.join(dirpath, fname), 'r') as f:
-            incs = included_files_from_string(f.read())
-            for i in incs:
+            includes = included_files_from_string(f.read())
+            for i in includes:
                 included_files.add(i)
     return included_files
 
@@ -253,10 +253,10 @@ def process_ly_names(lyfilenames, dirpath, rootdir):
     # GET HEADER DATA ETC
     # print('\n\n', version, dirpath[len(rootdir):], '\n', lyfilenames)
 
-    included_files = get_included_files(lyfilenames, dirpath)
-    row, diff_keys = get_header_data(lyfilenames, dirpath)
+    row, conflicting_data = get_header_data(lyfilenames, dirpath)
 
-    # the files that are not included are top level files (ideally just one file)
+    # the files that are not included are top level files (usually just one file)
+    included_files = get_included_files(lyfilenames, dirpath)
     not_included_files = list(set(lyfilenames).difference(included_files))
 
     # print('included: ', included_files)
@@ -266,7 +266,7 @@ def process_ly_names(lyfilenames, dirpath, rootdir):
     clntSet = check_for_clairnote_code(not_included_files, dirpath)
 
     if len(clntSet) > 1:
-        diff_keys.add('cn-code')
+        conflicting_data.add('cn-code')
         # TODO: confirm this output is what we want in the CSV file
         row['cn-code'] = list(clntSet)
     else:
@@ -274,25 +274,22 @@ def process_ly_names(lyfilenames, dirpath, rootdir):
 
     # Handle conflicting data in different files
     # first prune irrelevant conflicts
-    # some are handled earlier, not even added to diff_keys
-    if diff_keys:
+    # some are handled earlier, not even added to conflicting_data
+    if conflicting_data:
         for k in ['composer', 'title', 'instrument', 'style', 'license', 'opus', 'poet']:
-            if k in diff_keys and row['mutopia' + k] != '':
-                diff_keys.discard(k)
+            if k in conflicting_data and row['mutopia' + k] != '':
+                conflicting_data.discard(k)
 
     # second deal with remaining relevant conflicts
-    if diff_keys:
-        print('omit! conflicting data:', dirpath[len(rootdir):], list(diff_keys), '\n')
+    if conflicting_data:
+        print('omit! conflicting data:', dirpath[len(rootdir):], list(conflicting_data), '\n')
         row['cn-omit'] = 'T'
-        row['cn-omit-reason'] = 'conflicting header data: ' + repr(diff_keys)
+        row['cn-omit-reason'] = 'conflicting header data: ' + repr(conflicting_data)
 
     row = add_cn_fields(row)
     row = add_license_data(row)
-
     row['mtime'] = get_most_recent_mtime(lyfilenames, dirpath)
-
     row['filename'] = ',,, '.join(list(not_included_files))
-
     # strip slash on the left for good measure, for tests etc.
     row['path'] = dirpath[len(rootdir):].lstrip(os.path.sep)
 
@@ -306,10 +303,13 @@ def process_ly_names(lyfilenames, dirpath, rootdir):
     # remove footer
     # row.pop('footer', False)
 
-    return row, diff_keys
+    return row, conflicting_data
 
 def walk_the_tree(rootdir):
     """ Walk through rootdir and subdirectories parsing data from ly files.
+        Descends until it finds a directory with ly files. If there are
+        subdirectories, then it bails out and skips that work.  Otherwise it
+        does its work on the ly files in that directory.
         rootdir (string) is path to the root directory """
     csv_data = []
     parse_order = 0
@@ -328,19 +328,19 @@ def walk_the_tree(rootdir):
 
                     if version != None and vsnGreaterThanOrEqualTo(args.earliest_ly_version, version):
 
-                        row, diff_keys = process_ly_names(lyfilenames, dirpath, rootdir)
+                        row, conflicting_data = process_ly_names(lyfilenames, dirpath, rootdir)
                         row['ly-version'] = version
 
                         parse_order += 1
                         row['parse-order'] = parse_order
                         csv_data.append(row)
-                        if (len(diff_keys) > 0):
+                        if (len(conflicting_data) > 0):
                             diff_keys_count += 1
 
                 else:
+                    # there are subdirectories and we can't handle them, so skip it.
                     subdir_skips += 1
                     # print('skip! subdirectories:', dirpath[len(rootdir):], dirnames, '\n')
-
                     # clear dirnames to prevent os.walk from going deeper
                     # we have to do it like this, delete in place:
                     dirnames.clear()
