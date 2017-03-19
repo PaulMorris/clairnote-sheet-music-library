@@ -98,52 +98,10 @@ def header_data_from_string(filestring):
     hdr2 = balancedBraces(hdr1)
     hdr3 = hdr_fields_regex.findall(hdr2)
     hdr4 = dictifyHeader(hdr3)
-    fdata = {}
+    row = {}
     for key in csvKeys:
-        fdata[key] = hdr4.pop(key, '')
-    return fdata
-
-
-def extractData(fdata, vsn, not_included_files, dirpath, rootdir):
-
-    # use separate 'cn-' fields so we can see what's going on in the .ly files
-    fdata['cn-title'] = fdata['mutopiatitle'] or fdata['title']
-    fdata['cn-opus'] = fdata['mutopiaopus'] or fdata['opus']
-    fdata['cn-style'] = fdata['mutopiastyle'] or fdata['style']
-    fdata['cn-instrument'] = fdata['mutopiainstrument'] or fdata['instrument']
-    fdata['cn-poet'] = fdata['mutopiapoet'] or fdata['poet']
-    fdata['cn-license'] = fdata['mutopialicense'] or fdata['license'] or fdata['copyright']
-
-    licenseLookup = {
-        'Public Domain': ['pd', 0],
-        'Creative Commons Attribution 4.0': ['by', 4],
-        'Creative Commons Attribution 3.0': ['by', 3],
-        'Creative Commons Attribution-ShareAlike 3.0': ['by-sa', 3],
-        'Creative Commons Attribution-ShareAlike 4.0': ['by-sa', 4]
-    }
-
-    fdata['license-type'] = licenseLookup.get(fdata['cn-license'], ['', ''])[0]
-    fdata['license-vsn'] = licenseLookup.get(fdata['cn-license'], ['', 0])[1]
-
-    fdata['ly-version'] = vsn
-
-    fdata['filename'] = ',,, '.join(list(not_included_files))
-
-    # strip slash on the left for good measure, for tests etc.
-    fdata['path'] = dirpath[len(rootdir):].lstrip(os.path.sep)
-
-    print(dirpath, "   ", rootdir, "   ", fdata['path'])
-
-    # not currently used
-    # ftr = fdata['footer']
-    # fdata['mutopia-id'] = regexSearch(muto_id_regex, ftr)
-    # strip footer to just the date
-    # fdata['footer'] = regexSearch(footer_regex, ftr)
-    # remove footer
-    # fdata.pop('footer', False)
-
-    return fdata
-
+        row[key] = hdr4.pop(key, '')
+    return row
 
 """
 # unused
@@ -256,6 +214,28 @@ def check_for_clairnote_code(files, dirpath):
                 result.add(False)
     return result
 
+def add_cn_fields(row):
+    # use separate 'cn-' fields so we can see what's going on in the .ly files
+    row['cn-title'] = row['mutopiatitle'] or row['title']
+    row['cn-opus'] = row['mutopiaopus'] or row['opus']
+    row['cn-style'] = row['mutopiastyle'] or row['style']
+    row['cn-instrument'] = row['mutopiainstrument'] or row['instrument']
+    row['cn-poet'] = row['mutopiapoet'] or row['poet']
+    row['cn-license'] = row['mutopialicense'] or row['license'] or row['copyright']
+    return row
+
+def add_license_data(row):
+    licenseLookup = {
+        'Public Domain': ['pd', 0],
+        'Creative Commons Attribution 4.0': ['by', 4],
+        'Creative Commons Attribution 3.0': ['by', 3],
+        'Creative Commons Attribution-ShareAlike 3.0': ['by-sa', 3],
+        'Creative Commons Attribution-ShareAlike 4.0': ['by-sa', 4]
+    }
+    row['license-type'] = licenseLookup.get(row['cn-license'], ['', ''])[0]
+    row['license-vsn'] = licenseLookup.get(row['cn-license'], ['', 0])[1]
+    return row
+
 def get_most_recent_mtime(files, dirpath):
     """ Return the most recent mtime for a list of files in a directory """
     most_recent = None
@@ -264,10 +244,9 @@ def get_most_recent_mtime(files, dirpath):
         if most_recent == None or most_recent < mtime:
             most_recent = mtime
     return most_recent
-
     # not used currently, but kept for future reference
     # ctime = last time a file's metadata was changed (owner, permissions, etc.)
-    # fdata['ctime'] = os.path.getctime(dirpath + '/' + fname)
+    # row['ctime'] = os.path.getctime(os.path.join(dirpath, fname))
 
 def process_ly_names(lyfilenames, dirpath, rootdir):
 
@@ -275,7 +254,7 @@ def process_ly_names(lyfilenames, dirpath, rootdir):
     # print('\n\n', version, dirpath[len(rootdir):], '\n', lyfilenames)
 
     included_files = get_included_files(lyfilenames, dirpath)
-    header_data, diff_keys = get_header_data(lyfilenames, dirpath)
+    row, diff_keys = get_header_data(lyfilenames, dirpath)
 
     # the files that are not included are top level files (ideally just one file)
     not_included_files = list(set(lyfilenames).difference(included_files))
@@ -289,25 +268,45 @@ def process_ly_names(lyfilenames, dirpath, rootdir):
     if len(clntSet) > 1:
         diff_keys.add('cn-code')
         # TODO: confirm this output is what we want in the CSV file
-        header_data['cn-code'] = list(clntSet)
+        row['cn-code'] = list(clntSet)
     else:
-        header_data['cn-code'] = list(clntSet)[0]
+        row['cn-code'] = list(clntSet)[0]
 
     # Handle conflicting data in different files
     # first prune irrelevant conflicts
     # some are handled earlier, not even added to diff_keys
     if diff_keys:
         for k in ['composer', 'title', 'instrument', 'style', 'license', 'opus', 'poet']:
-            if k in diff_keys and header_data['mutopia' + k] != '':
+            if k in diff_keys and row['mutopia' + k] != '':
                 diff_keys.discard(k)
 
     # second deal with remaining relevant conflicts
     if diff_keys:
         print('omit! conflicting data:', dirpath[len(rootdir):], list(diff_keys), '\n')
-        header_data['cn-omit'] = 'T'
-        header_data['cn-omit-reason'] = 'conflicting header data: ' + repr(diff_keys)
+        row['cn-omit'] = 'T'
+        row['cn-omit-reason'] = 'conflicting header data: ' + repr(diff_keys)
 
-    return header_data, not_included_files, diff_keys
+    row = add_cn_fields(row)
+    row = add_license_data(row)
+
+    row['mtime'] = get_most_recent_mtime(lyfilenames, dirpath)
+
+    row['filename'] = ',,, '.join(list(not_included_files))
+
+    # strip slash on the left for good measure, for tests etc.
+    row['path'] = dirpath[len(rootdir):].lstrip(os.path.sep)
+
+    print(dirpath, "   ", rootdir, "   ", row['path'])
+
+    # not currently used
+    # ftr = row['footer']
+    # row['mutopia-id'] = regexSearch(muto_id_regex, ftr)
+    # strip footer to just the date
+    # row['footer'] = regexSearch(footer_regex, ftr)
+    # remove footer
+    # row.pop('footer', False)
+
+    return row, diff_keys
 
 def walk_the_tree(rootdir):
     """ Walk through rootdir and subdirectories parsing data from ly files.
@@ -329,11 +328,9 @@ def walk_the_tree(rootdir):
 
                     if version != None and vsnGreaterThanOrEqualTo(args.earliest_ly_version, version):
 
-                        header_data, not_included_files, diff_keys = process_ly_names(lyfilenames, dirpath, rootdir)
+                        row, diff_keys = process_ly_names(lyfilenames, dirpath, rootdir)
+                        row['ly-version'] = version
 
-                        header_data['mtime'] = get_most_recent_mtime(lyfilenames, dirpath)
-
-                        row = extractData(header_data, version, not_included_files, dirpath, rootdir)
                         parse_order += 1
                         row['parse-order'] = parse_order
                         csv_data.append(row)
