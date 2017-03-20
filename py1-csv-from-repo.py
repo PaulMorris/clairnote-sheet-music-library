@@ -3,6 +3,7 @@ import os, csv, argparse
 from py_ly_parsing import (regexes, regex_search, vsn_greater_than_or_equals,
     get_ly_filenames, get_version, get_included_files, get_header_data,
     check_for_clairnote_code, get_most_recent_mtime)
+from py_csv_merging import merge_csv_data
 
 # walks through a directory and all subdirectories creating a csv file with data from the ly files
 
@@ -12,7 +13,6 @@ parser.add_argument("rootdir", help="The root directory that contains the ly fil
 parser.add_argument("-o", "--csv-output", help="Path and name for the CSV file output") # e.g. 'out/from-repo.csv'
 parser.add_argument("-p", "--csv-previous", help="Path and name of the previous CSV file") # e.g. 'out/previous-final.csv'
 parser.add_argument("-l", "--earliest-ly-version", help="The earliest LilyPond version to include in CSV file") # e.g. '2.14.0'
-args = parser.parse_args()
 
 csv_keys = ['mutopia-id', 'parse-order', 'omit?', 'omit-reason', 'new?', 'error-status?', 'flagged?',
     'cn-code', 'ly-version', 'mutopiacomposer', 'cn-title', 'cn-opus', 'path', 'filename',
@@ -103,7 +103,7 @@ def process_ly_names(lyfilenames, dirpath, rootdir):
 
     return row, conflicting_data
 
-def walk_the_tree(rootdir):
+def walk_the_tree(rootdir, earliest_ly_version):
     """ Walk through rootdir and subdirectories parsing data from ly files.
         Descends until it finds a directory with ly files. If there are
         subdirectories, then it bails out and skips that work.  Otherwise it
@@ -124,7 +124,7 @@ def walk_the_tree(rootdir):
                 if dirnames == []:
                     version = get_version(lyfilenames, dirpath)
 
-                    if version != None and vsn_greater_than_or_equals(args.earliest_ly_version, version):
+                    if version != None and vsn_greater_than_or_equals(earliest_ly_version, version):
 
                         row, conflicting_data = process_ly_names(lyfilenames, dirpath, rootdir)
                         row['ly-version'] = version
@@ -144,85 +144,32 @@ def walk_the_tree(rootdir):
                     # we have to do it like this, delete in place:
                     dirnames.clear()
 
+    return csv_data, parse_order, conflicting_data_count, subdir_skips
+
+
+def main(args):
+    csv_data, parse_order, conflicting_data_count, subdir_skips = walk_the_tree(args.rootdir, args.earliest_ly_version)
+
     print('\nLilyPond files parsed, data gathered.',
         '\n  Total works:', parse_order,
         '\n  conflicting_data_count:', conflicting_data_count,
         '\n  subdir_skips:', subdir_skips)
 
-    return csv_data
 
-
-csv_data = walk_the_tree(args.rootdir)
-
-# GET OLD META DATA, MERGE IT IN, AND MARK NEW ITEMS
-
-def merge_csv_data(old_csv, new_csv_data, id_field_name):
-    """ Merge data from previous csv and mark which items are new.
-        old_csv (string) is the path to the previous csv file
-        new_csv_data (list) data destined for the new csv file
-        id_field_name (string) key for the id value for items in new_csv_data
-        returns (list) merged data """
-
-    # get old meta data
-    old_meta_data = {}
-
-    with open(old_csv, newline='') as old_csv_read:
-        reader = csv.DictReader(old_csv_read)
-        for row in reader:
-            item_id = int(row[id_field_name])
-
-            if row['new?'] == 'T':
-                print('\nOOPS! - There is an item marked as NEW in the OLD csv file... ID: ' + str(item_id))
-
-            old_meta_data[item_id] = {
-                'omit?': row['omit?'],
-                'omit-reason': row['omit-reason'],
-                'new?': row['new?'],
-                'error-status?': row['error-status?']
-            }
-
-    # merge old meta data into new data and mark new items as new
-    # the meta data fields should be empty in the new data, so nothing is overwritten
-    old_total = len(old_meta_data)
-    new_total = len(new_csv_data)
-    merged_csv_data = []
-
-    for item in new_csv_data:
-        # note: item is a dict so it is appended by reference not by value
-        merged_csv_data.append(item)
-        item_id = int(item[id_field_name])
-
-        if item_id in old_meta_data:
-            merged_csv_data[-1].update(old_meta_data[item_id])
-            # remove the item from old_meta_data so we can identify any orphaned works
-            del old_meta_data[item_id]
-        else:
-            merged_csv_data[-1]['new'] = 'T'
-
-    print('\n' + str(old_total), 'Works in previous CSV file.')
-    print(new_total, 'Works in current CSV file.')
-    print(str(new_total - old_total), 'Total new works.\n')
-
-    if len(old_meta_data) > 0:
-        print("Orphaned works that were in previous CSV file but were not in current CSV file:", sorted(old_meta_data.keys()))
+    # MERGE IN PREVIOUS CSV META DATA AND MARK NEW ITEMS
+    final_csv_data = None
+    if args.csv_previous:
+        final_csv_data = merge_csv_data(args.csv_previous, csv_data, 'mutopia-id')
     else:
-        print("There were no orphaned works, all items in previous CSV are in current CSV.")
+        final_csv_data = csv_data
 
-    return merged_csv_data
+    # GENERATE CSV FILE
+    with open(args.csv_output, 'w') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=csv_keys)
+        writer.writeheader()
+        for line in final_csv_data:
+            writer.writerow(line)
+        print('CSV file created: ' + args.csv_output)
 
-
-final_csv_data = None
-if args.csv_previous:
-    final_csv_data = merge_csv_data(args.csv_previous, csv_data, 'mutopia-id')
-else:
-    final_csv_data = csv_data
-
-
-# GENERATE CSV FILE
-
-with open(args.csv_output, 'w') as csvfile:
-    writer = csv.DictWriter(csvfile, fieldnames=csv_keys)
-    writer.writeheader()
-    for line in final_csv_data:
-        writer.writerow(line)
-    print('CSV file created: ' + args.csv_output)
+if __name__ == "__main__":
+    main(parser.parse_args())
