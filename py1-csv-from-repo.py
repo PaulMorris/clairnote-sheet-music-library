@@ -155,7 +155,6 @@ def main(args):
         '\n  conflicting_data_count:', conflicting_data_count,
         '\n  subdir_skips:', subdir_skips)
 
-
     # MERGE IN PREVIOUS CSV META DATA AND MARK NEW ITEMS
     final_csv_data = None
     if args.csv_previous:
