@@ -16,9 +16,9 @@ regexes = {
     'include': re.compile('\\\\include.*?\".*?\"'),
     'score': re.compile('\\\\score'),
     'mutopiacomposer': re.compile('.*mutopiacomposer.*', re.DOTALL),
-    'copyright' = re.compile('copyright.*?='),
-    'tagline' = re.compile('tagline.*?='),
-    'spaces' = re.compile('^.*?\S')
+    'copyright': re.compile('copyright.*?='),
+    'tagline': re.compile('tagline.*?='),
+    'spaces': re.compile('^.*?\S')
 }
 
 def regex_search(r, s):
