@@ -56,12 +56,13 @@ def balanced_brackets(arg):
                 return result
     return "NOPE"
 
+def vsn_int(vsn):
+    vsn_list = vsn.split('.')
+    vsn_num = int(vsn_list[0]) * 1000000 + int(vsn_list[1]) * 1000 + int(vsn_list[2])
+    return vsn_num
+
 def vsn_greater_than_or_equals(ref, vsn):
-    vsnList = vsn.split('.')
-    refList = ref.split('.')
-    vsnNum = int(vsnList[0]) * 1000000 + int(vsnList[1]) * 1000 + int(vsnList[2])
-    refNum = int(refList[0]) * 1000000 + int(refList[1]) * 1000 + int(refList[2])
-    return vsnNum >= refNum
+    return vsn_int(vsn) >= vsn_int(ref)
 
 def get_ly_filenames(filenames):
     lynames = []

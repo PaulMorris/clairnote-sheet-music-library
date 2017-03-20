@@ -1,23 +1,18 @@
 #!/usr/bin/env python3
 import subprocess, csv, os
+from py_ly_parsing import vsn_int
 
 sourceCSV = 'out/to-run-convert-ly-on.csv'
 rootDir = '../../The-Mutopia-Project/ftp/'
 newvsn = '2.19.49'
-
-def vsnInt(vsn):
-    vsnList = vsn.split('.')
-    vsnNum = int(vsnList[0]) * 1000000 + int(vsnList[1]) * 1000 + int(vsnList[2])
-    return vsnNum
-
 # we convert-ly any files not omitted and BETWEEN these two versions:
-lower = vsnInt('2.18.2')
-higher = vsnInt('2.19.49')
+lower = vsn_int('2.18.2')
+higher = vsn_int('2.19.49')
 
 with open(sourceCSV, newline='') as csvfile:
     reader = csv.DictReader(csvfile)
     for row in reader:
-        vsn = vsnInt(row['ly-version'])
+        vsn = vsn_int(row['ly-version'])
 
         if vsn > lower and vsn < higher and row['omit?'] != 'T':
             pathToDir = os.path.join(rootDir, row['path'])
