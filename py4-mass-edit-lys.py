@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
 import csv, os, re
+from py_ly_parsing import get_ly_filenames, regexes
 
 sourceCSV = 'out/from-repo.csv'
 
 rootDir = '../../The-Mutopia-Project/ftp/'
-
-raw_vsn_regex = re.compile('\\\\version.*?\".*?\"')
-copyright_regex = re.compile('copyright.*?=')
-tagline_regex = re.compile('tagline.*?=')
-spaces_regex = re.compile('^.*?\S')
 
 cc1 = r'copyright = \markup { \vspace #1.8 \sans \abs-fontsize #7.5 \wordwrap {Sheet music in \with-url #"http://clairnote.org" {Clairnote music notation} published by Paul Morris using \with-url #"http://www.lilypond.org" {LilyPond.} Original typesetting by \maintainer for the \with-url #"http://www.mutopiaproject.org" {Mutopia Project.} '
 
@@ -21,13 +17,6 @@ ccLookup = {
     'by-sa3': r'Licensed under \with-url #"http://creativecommons.org/licenses/by-sa/3.0/" {Creative Commons Attribution-ShareAlike 3.0} ',
     'by-sa4': r'Licensed under \with-url #"http://creativecommons.org/licenses/by-sa/4.0/" {Creative Commons Attribution-ShareAlike 4.0} '
     }
-
-def getLyFilenames(filenames):
-    lynames = []
-    for f in filenames:
-        if f[-3:] == '.ly' or f[-4:] == '.ily' or f[-4:] == '.lyi':
-            lynames.append(f)
-    return lynames
 
 # count = 0
 
@@ -63,7 +52,7 @@ with open(sourceCSV, newline='') as csvfile:
                 with open(pathToRenamedLy, 'r') as oldf, open(pathToLy, 'w') as newf:
                     for line in oldf:
                         # clairnote-code
-                        if raw_vsn_regex.search(line):
+                        if regexes['raw_version'].search(line):
                             newf.write(line)
                             newf.write(r'\include "clairnote-code.ly"' + '\n')
                         else:
@@ -81,7 +70,7 @@ with open(sourceCSV, newline='') as csvfile:
             else: oldMutopiaFooter = False
 
             files = [f for f in os.listdir(pathToDir) if os.path.isfile(os.path.join(pathToDir, f))]
-            lyfiles = getLyFilenames(files)
+            lyfiles = get_ly_filenames(files)
 
             for file in lyfiles:
                 pathToLy = os.path.join(pathToDir, file)
@@ -103,8 +92,8 @@ with open(sourceCSV, newline='') as csvfile:
                     for line in oldf:
 
                         # copyright and license
-                        if copyright_regex.search(line):
-                            sp = spaces_regex.search(line)
+                        if regexes['copyright'].search(line):
+                            sp = regexes['spaces'].search(line)
                             s = sp.group()[0:-1]
 
                             if oldMutopiaFooter:
@@ -113,8 +102,8 @@ with open(sourceCSV, newline='') as csvfile:
                                 newf.write(s + newcc + '\n')
 
                         # tagline
-                        elif tagline_regex.search(line) and oldMutopiaFooter:
-                            sp = spaces_regex.search(line)
+                        elif regexes['tagline'].search(line) and oldMutopiaFooter:
+                            sp = regexes['spaces'].search(line)
                             s = sp.group()[0:-1]
                             newf.write(s + newcc + '\n')
                             newf.write(s + 'tagline = ##f\n')
@@ -125,5 +114,5 @@ with open(sourceCSV, newline='') as csvfile:
 
                 # move old file out of repo
                 os.rename(pathToRenamedLy, 'delete-later/' + file)
-                
+
                 #  + os.path.join(row['path'], file)

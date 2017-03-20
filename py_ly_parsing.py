@@ -15,7 +15,10 @@ regexes = {
     'clairnote_code': re.compile('\\\\include.*?\"clairnote-code.ly\"'),
     'include': re.compile('\\\\include.*?\".*?\"'),
     'score': re.compile('\\\\score'),
-    'mutopiacomposer': re.compile('.*mutopiacomposer.*', re.DOTALL)
+    'mutopiacomposer': re.compile('.*mutopiacomposer.*', re.DOTALL),
+    'copyright' = re.compile('copyright.*?='),
+    'tagline' = re.compile('tagline.*?='),
+    'spaces' = re.compile('^.*?\S')
 }
 
 def regex_search(r, s):
