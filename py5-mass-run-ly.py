@@ -290,15 +290,15 @@ with open(sourceCSV, newline='') as csvfileA, open(targetCSV, 'w') as csvfileB:
             if row['mutopia-id'] in problemFileIDs:
                 print(row['mutopia-id'])
                 # DON'T OMIT AUTOMATICALLY
-                # row['cn-omit'] = 'T'
-                # row['cn-omit-reason'] = 'ly error or warn'
+                # row['omit?'] = 'T'
+                # row['omit-reason'] = 'ly error or warn'
                 row['error-status?'] = 'error'
                 problemFileIDs.discard(row['mutopia-id'])
             '''
             elif int(row['mutopia-id']) in convertlyErrIds:
                 print(row['mutopia-id'])
-                row['cn-omit'] = 'T'
-                row['cn-omit-reason'] = 'convert-ly error'
+                row['omit?'] = 'T'
+                row['omit-reason'] = 'convert-ly error'
                 convertlyErrIds.discard(row['mutopia-id'])
             '''
         writer.writerow(row)

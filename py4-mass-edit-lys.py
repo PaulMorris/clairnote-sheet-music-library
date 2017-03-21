@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import csv, os, re
-from py_ly_parsing import get_ly_filenames, regexes
+from py_ly_parsing import get_all_lilypond_filenames, regexes
 
 sourceCSV = 'out/from-repo.csv'
 
@@ -70,7 +70,7 @@ with open(sourceCSV, newline='') as csvfile:
             else: oldMutopiaFooter = False
 
             files = [f for f in os.listdir(pathToDir) if os.path.isfile(os.path.join(pathToDir, f))]
-            lyfiles = get_ly_filenames(files)
+            lyfiles = get_all_lilypond_filenames(files)
 
             for file in lyfiles:
                 pathToLy = os.path.join(pathToDir, file)

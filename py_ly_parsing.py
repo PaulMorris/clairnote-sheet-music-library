@@ -11,6 +11,7 @@ regexes = {
     'header_field_key': re.compile(".*?[\s|=]"),
     'header_field_val': re.compile("\".*\""),
     'muto_id': re.compile("[0-9]*$"),
+    'the_session_id': re.compile("([0-9]*)#setting([0-9]*)"), # https://thesession.org/tunes/
     'footer': re.compile("[0-9][0-9][0-9][0-9]/[0-9][0-9]/[0-9][0-9]"),
     'clairnote_code': re.compile('\\\\include.*?\"clairnote-code.ly\"'),
     'include': re.compile('\\\\include.*?\".*?\"'),
@@ -64,10 +65,17 @@ def vsn_int(vsn):
 def vsn_greater_than_or_equals(ref, vsn):
     return vsn_int(vsn) >= vsn_int(ref)
 
-def get_ly_filenames(filenames):
+def get_all_lilypond_filenames(filenames):
     lynames = []
     for f in filenames:
         if f[-3:] == '.ly' or f[-4:] == '.ily' or f[-4:] == '.lyi':
+            lynames.append(f)
+    return lynames
+
+def get_ly_filenames(filenames):
+    lynames = []
+    for f in filenames:
+        if f[-3:] == '.ly':
             lynames.append(f)
     return lynames
 
@@ -114,14 +122,20 @@ def dictify_header(fields):
         result.append(( key[0:-1], val[1:-1] ))
     return dict(result)
 
-def header_data_from_string(filestring, csv_keys):
+# get all header data from a file string and return it as a dict
+def header_data_from_string(filestring):
     hdr1 = regex_search(regexes['header'], filestring)
     hdr2 = balanced_brackets(hdr1)
     hdr3 = regexes['header_fields'].findall(hdr2)
     hdr4 = dictify_header(hdr3)
+    return hdr4
+
+# get header data for only the keys in csv_keys, return it as a dict
+def header_data_for_keys(filestring, csv_keys):
+    header_data = header_data_from_string(filestring)
     row = {}
     for key in csv_keys:
-        row[key] = hdr4.pop(key, '')
+        row[key] = header_data.pop(key, '')
     return row
 
 def get_header_data(lyfilenames, dirpath, csv_keys):
@@ -129,11 +143,11 @@ def get_header_data(lyfilenames, dirpath, csv_keys):
     inconsistent_keys = set()
     for fname in lyfilenames:
         with open(os.path.join(dirpath, fname), 'r') as f:
-            header = header_data_from_string(f.read(), csv_keys)
+            header = header_data_for_keys(f.read(), csv_keys)
 
             # merge this file's header fields into header_data
             # the keys of inconsistent values are stored
-            irrelevant_conflicts = ['footer', 'filename', 'source']
+            irrelevant_conflicts = ['footer', 'filename', 'source', 'subtitle']
             for k, v in header.items():
 
                 if k not in header_data or header_data[k] == '':
@@ -190,7 +204,7 @@ def create_full_paths(dirpath, filenames):
 def get_all_dir_ly_paths(rootdir):
     lypaths = []
     for dirpath, dirnames, filenames in os.walk(rootdir):
-        lyfiles = get_ly_filenames(filenames)
+        lyfiles = get_all_lilypond_filenames(filenames)
         lypaths.append(create_full_paths(dirpath, lyfiles))
     return lypaths
 
