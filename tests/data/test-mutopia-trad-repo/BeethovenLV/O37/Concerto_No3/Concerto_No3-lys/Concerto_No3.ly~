@@ -1,0 +1,124 @@
+\version "2.19.46"
+\include "clairnote-code.ly"
+
+\include "flauti.ly"
+\include "oboi.ly"
+\include "clarinetti.ly"
+\include "fagotti.ly"
+\include "cornies.ly"
+\include "trombe.ly"
+\include "timpani.ly"
+\include "pianoone.ly"
+\include "pianotwo.ly"
+\include "violinoone.ly"
+\include "violinotwo.ly"
+\include "viola.ly"
+\include "bassi.ly"
+
+\header {
+  title = "Piano Concerto No. 3 in C Minor, Opus 37"
+  composer = "Ludwig van Beethoven"
+  mutopiatitle = "Piano Concerto No. 3 in C Minor (1st Movement: Allegro con brio)"
+  mutopiacomposer = "BeethovenLv"
+  mutopiainstrument = "Piano and Orchestra"
+  mutopiaopus = "Op. 37"
+  date = "19th Century"
+  source = "Breitkopf and Hartel (1862-1865)"
+  style = "Classical"
+  license = "Public Domain"
+  maintainer = "Stelios Samelis"
+
+ footer = "Mutopia-2016/12/29-899"
+ copyright = \markup { \vspace #1.8 \sans \abs-fontsize #7.5 \wordwrap {Sheet music in \with-url #"http://clairnote.org" {Clairnote music notation} published by Paul Morris using \with-url #"http://www.lilypond.org" {LilyPond.} Original typesetting by \maintainer for the \with-url #"http://www.mutopiaproject.org" {Mutopia Project.} Placed in the \with-url #"http://creativecommons.org/publicdomain/zero/1.0/" {public domain} by the typesetter. Free to distribute, modify, and perform.}}
+ tagline = ##f
+}
+
+\score {
+
+ <<
+
+ \context StaffGroup = "firstsystem" <<
+
+ \context Staff = "one" {
+ \flauti
+}
+
+ \context Staff = "two"  {
+ \oboi
+ }
+
+ \context Staff = "three" {
+ \transposition bes'
+ \clarinetti
+}
+
+ \context Staff = "four" {
+ \fagotti
+ }
+
+ \context Staff = "five"  {
+ \transposition ees
+ \cornies 
+ }
+
+ \context Staff = "six"  {
+ \trombe
+ }
+
+ \context Staff = "seven" {
+ \timpani
+ }
+ >>
+
+ \context PianoStaff <<
+
+ \context Staff = "eight"  {
+ \pianoone
+ }
+
+ \context Staff = "nine"  {
+ \pianotwo
+ }
+>>
+
+ \context StaffGroup = "secondsystem" <<
+
+ \context Staff = "ten"  {
+ \violinoone
+ }
+
+ \context Staff = "eleven"  {
+ \violinotwo
+ }
+
+ \context Staff = "twelve"  {
+ \viola
+ }
+
+ \context Staff = "thirteen"  {
+ \bassi
+ }
+>>
+
+ >>
+
+ \layout {
+   \context {
+   \Staff
+   \override VerticalAxisGroup.minimum-Y-extent = #'(-5.0 . 5.0)
+   fontSize = #-1
+   }
+ }
+
+ 
+  \midi {
+    \tempo 4 = 132
+    }
+
+
+
+}
+
+\paper {
+ line-width = 18.0\cm
+}
