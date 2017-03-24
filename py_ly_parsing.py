@@ -19,6 +19,7 @@ regexes = {
     'mutopiacomposer': re.compile('.*mutopiacomposer.*', re.DOTALL),
     'copyright': re.compile('copyright.*?='),
     'tagline': re.compile('tagline.*?='),
+    'subtitle': re.compile('subtitle.*?='),
     'spaces': re.compile('^.*?\S')
 }
 
