@@ -43,7 +43,7 @@ def merge(old_csv, new_csv_data, id_field_name):
             # remove the item from old_meta_data so we can identify any orphaned works
             del old_meta_data[item_id]
         else:
-            merged_csv_data[-1]['new'] = 'T'
+            merged_csv_data[-1]['new?'] = 'T'
 
     return merged_csv_data, old_total, new_total, old_meta_data
 

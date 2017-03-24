@@ -172,7 +172,7 @@ def version_check(earliest_ly_version):
         return vsn != None and vsn_greater_than_or_equals(earliest_ly_version, vsn)
     return vcheck
 
-def handle_pieces(pieces, rootdir, mode, csv_keys):
+def handle_pieces(pieces, rootdir, mode, csv_keys, csv_previous):
     csv_data = []
     parse_order = 0
     conflicts_count = 0
@@ -181,6 +181,8 @@ def handle_pieces(pieces, rootdir, mode, csv_keys):
         row['ly-version'] = p['version']
         parse_order += 1
         row['parse-order'] = parse_order
+        if not csv_previous:
+            row['new?'] = 'T'
         csv_data.append(row)
 
         if (len(conflicts) > 0):
@@ -201,7 +203,7 @@ def main(args):
         pieces, subdir_skips = file_paths_func(args.rootdir)
         pieces_version_checked = list(filter(version_check(args.earliest_ly_version), pieces))
 
-        csv_data, parse_order, conflicts_count = handle_pieces(pieces_version_checked, args.rootdir, args.mode, csv_keys)
+        csv_data, parse_order, conflicts_count = handle_pieces(pieces_version_checked, args.rootdir, args.mode, csv_keys, args.csv_previous)
 
         print('\nLilyPond files parsed, data gathered.',
               '\nTotal works:', parse_order,
