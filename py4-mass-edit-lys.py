@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import csv, os, re, argparse
+import csv, os, re, argparse, shutil
 from collections import Counter
 from py_ly_parsing import get_ly_filenames, regexes
 
@@ -92,17 +92,24 @@ def handle_row(row, rootdir, outdir, mode):
 
     all_files = [f for f in os.listdir(root_dir_path) if os.path.isfile(os.path.join(root_dir_path, f))]
     lyfiles = get_ly_filenames(all_files)
+    other_files = [f for f in all_files if f not in lyfiles]
 
     for ly in lyfiles:
-        path_to_ly = os.path.join(root_dir_path, ly)
-        path_to_renamed_ly = os.path.join(out_dir_path, ly)
-
+        source = os.path.join(root_dir_path, ly)
+        target = os.path.join(out_dir_path, ly)
         is_topfile = ly in topfiles
 
         # create new file and copy old file to it, changing as needed
-        with open(path_to_ly, 'r') as oldf, open(path_to_renamed_ly, 'w') as newf:
+        with open(source, 'r') as oldf, open(target, 'w') as newf:
             for line in oldf:
                 handle_file_line(line, newf, old_mutopia_footer, is_topfile, row)
+
+    for f in other_files:
+        # copy other files to the other directory
+        if f[-4:] != '.pdf' and f[-4:] != '.mid' and f[-5:] != '.midi':
+            source = os.path.join(root_dir_path, f)
+            target = os.path.join(out_dir_path, f)
+            shutil.copy2(source, target)
 
 def handle_csv(csvpath, rootdir, outdir, mode):
     with open(csvpath, newline='') as csvfile:
