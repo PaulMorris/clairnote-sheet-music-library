@@ -20,7 +20,22 @@ regexes = {
     'copyright': re.compile('copyright.*?='),
     'tagline': re.compile('tagline.*?='),
     'subtitle': re.compile('subtitle.*?='),
-    'spaces': re.compile('^.*?\S')
+    'spaces': re.compile('^.*?\S'),
+
+    # for detecting errors when running LilyPond
+    'warn': re.compile('.*warning:'),
+    'err': re.compile('.*error:'),
+    'clairnote':  re.compile('.*clairnote-code.ly.*'),
+
+    'midi1': re.compile(r'.*programming error\: Impossible or ambiguous \(de\)crescendo in MIDI.*'),
+    'midi2': re.compile(r'.*warning\: \(De\)crescendo with unspecified starting volume in MIDI.*'),
+    'midi3': re.compile(r'.*warning\: MIDI channel wrapped around.*'),
+    'midi4': re.compile(r'.*warning\: remapping modulo 16.*'),
+
+    'compression1': re.compile('.*warning: compressing over-full page.*'),
+    'compression2': re.compile('.*warning: page.*has been compressed.*'),
+
+    'ambitus': re.compile('.*Ambitus_engraver.*'),
 }
 
 def regex_search(r, s):
