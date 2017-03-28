@@ -34,11 +34,9 @@ parser.add_argument("--midionly", help="only midi output, no visual output", act
 
 parser.add_argument("--dryrun", help="don't actually run LilyPond, just indicate how many files LilyPond would have been run on", action="store_true")
 
-
-dev_executable = 'lilypond'
-stable_executable = 'lilypond-stable'
-# this should be only first 4 digits of version string
-current_stable_version = "2.18"
+parser.add_argument("--ly-stable", help="Stable LilyPond executable", default='lilypond-stable')
+parser.add_argument("--ly-dev", help="Development LilyPond executable", default='lilypond')
+parser.add_argument("--stable-version", help="Should be only the first four characters (e.g. '2.18')", default='2.18')
 
 
 def remove_file(f):
@@ -46,10 +44,7 @@ def remove_file(f):
     if os.path.isfile(f):
         os.remove(f)
 
-
-################################################################
-#### error detection
-
+## error detection notes
 # 3 files out of 480 files have this:
 # programming error: number of pages is out of bounds
 # continuing, cross fingers
@@ -107,7 +102,8 @@ def get_command_midi_only(file_path_no_extension, file_path_ly, executable):
     ]
 
 def run_command(command):
-    ''' Use subprocess to run a command and return the console output. '''
+    ''' Use subprocess to run a command and return the console output.
+        LilyPond's console output is via stderr not stdout. '''
     proc = run(command, stdout=PIPE, stderr=PIPE, universal_newlines=True)
     console_out = proc.stderr.split('\n')
     return console_out
@@ -175,45 +171,46 @@ def run_lilypond_and_log(command, logfile, row, lyfile, errorfile):
     problem_ids = error_check(console_out, row['mutopia-id'], os.path.join(row['path'], lyfile), errorfile)
     return problem_ids
 
-
-def handle_rows(rows, rootdir, logfile, midi, midionly, noletter, noa4, errorfile):
+def handle_rows(rows, args):
+    ''' args includes: rootdir, logfile, midi, midionly, noletter, noa4,
+                       errorfile, ly_stable, ly_dev, stable_version ''' 
     problem_file_ids = set()
     for row in rows:
         lyfilenames = row['filename'].split(',,, ')
         version = row['ly-version']
-        executable = stable_executable if version[:4] == current_stable_version else dev_executable
+        executable = args.ly_stable if version[:4] == args.stable_version else args.ly_dev
 
         for lyfile in lyfilenames:
             file_no_extension = lyfile.split('.')[0]
-            file_path_ly = os.path.join(rootdir, row['path'], lyfile)
-            file_path_no_extension = os.path.join(rootdir, row['path'], file_no_extension)
+            file_path_ly = os.path.join(args.rootdir, row['path'], lyfile)
+            file_path_no_extension = os.path.join(args.rootdir, row['path'], file_no_extension)
 
-            # log 'header' details for this piece in console and logfile
-            log_lines(get_row_log_header(row, lyfile), logfile)
+            # log 'header' details for this piece in console and args.logfile
+            log_lines(get_row_log_header(row, lyfile), args.logfile)
 
             # MIDI ONLY
-            if midionly:
+            if args.midionly:
                 command = get_command_midi_only(file_path_no_extension, file_path_ly, executable)
-                midi_problems = run_lilypond_and_log(command, logfile, row, lyfile, errorfile)
+                midi_problems = run_lilypond_and_log(command, args.logfile, row, lyfile, args.errorfile)
                 problem_file_ids.update(midi_problems)
 
             else:
-                midi_letter = midi
-                midi_a4 = True if midi and noletter else False
+                midi_letter = args.midi
+                midi_a4 = True if args.midi and args.noletter else False
 
                 # LETTER PDF
-                if not noletter:
+                if not args.noletter:
                     command = get_command("letter", midi_letter, file_path_no_extension, file_path_ly, executable)
-                    letter_problems = run_lilypond_and_log(command, logfile, row, lyfile, errorfile)
+                    letter_problems = run_lilypond_and_log(command, args.logfile, row, lyfile, args.errorfile)
                     problem_file_ids.update(letter_problems)
-                    rename_pdf(file_path_no_extension, "-let", logfile)
+                    rename_pdf(file_path_no_extension, "-let", args.logfile)
 
                 # A4 PDF
-                if not noa4:
+                if not args.noa4:
                     command = get_command("a4", midi_a4, file_path_no_extension, file_path_ly, executable)
-                    a4_problems = run_lilypond_and_log(command, logfile, row, lyfile, errorfile)
+                    a4_problems = run_lilypond_and_log(command, args.logfile, row, lyfile, args.errorfile)
                     problem_file_ids.update(a4_problems)
-                    rename_pdf(file_path_no_extension, "-a4", logfile)
+                    rename_pdf(file_path_no_extension, "-a4", args.logfile)
 
     return problem_file_ids
 
@@ -254,7 +251,7 @@ def main(args):
     else:
         remove_file(args.errorfile)
         remove_file(args.logfile)
-        problem_file_ids = handle_rows(rows, args.rootdir, args.logfile, args.midi, args.midionly, args.noletter, args.noa4, args.errorfile)
+        problem_file_ids = handle_rows(rows, args)
         write_error_file(args.errorfile, problem_file_ids)
         update_csv(problem_file_ids, args.oldcsv, args.newcsv, args.logfile)
 
