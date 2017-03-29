@@ -36,6 +36,7 @@ regexes = {
     'compression2': re.compile('.*warning: page.*has been compressed.*'),
 
     'ambitus': re.compile('.*Ambitus_engraver.*'),
+    'instrument': re.compile('[a-zA-Z\-]+')
 }
 
 def regex_search(r, s):

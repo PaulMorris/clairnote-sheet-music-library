@@ -1,70 +1,69 @@
 #!/usr/bin/env python3
-import csv, json, re
+import csv, json, re, argparse
 from py_composers_etc import composer_list, instrument_list, style_list, two_word_insts
+from py_ly_parsing import regexes
 
-fullCSV = 'out/from-repo.csv' # 'out/errors-marked.csv'
-targetJSON = 'out/sheet-music-lib-data-search.js'
-targetHTML = 'out/html-checkboxes.html'
+parser = argparse.ArgumentParser()
+parser.add_argument("mode", help = "The mode for input and output e.g. 'mutopia' or 'thesession'")
+parser.add_argument("csvfile", help = "Path to the CSV file (input)")
+parser.add_argument("jsfile", help = "Path to the new JS file (output)")
+parser.add_argument("--htmlfile", help = "Path to the new HTML file (output)")
 
-composerLookupNewAdds = {}
-for c in composer_list:
-    # no dates in this listing, keep it simple
-    composerLookupNewAdds[c[0]] = '{0} {1}'.format(c[2], c[1])
+# GENERATE NEW ADDS REPORT
 
+def report_new_additions(csvfile):
+    composer_lookup = {}
+    for c in composer_list:
+        # no dates in this listing, keep it simple
+        composer_lookup[c[0]] = '{0} {1}'.format(c[2], c[1])
 
-count = 0
-missingComposers = set()
+    count = 0
+    missing_composers = set()
 
-with open(fullCSV, newline='') as source:
-    reader = csv.DictReader(source)
-    for row in reader:
+    with open(csvfile, newline='') as source:
+        reader = csv.DictReader(source)
+        for row in reader:
 
-        if row['mutopiacomposer'] not in composerLookupNewAdds:
-            missingComposers.add(row['mutopiacomposer'])
+            if row['mutopiacomposer'] not in composer_lookup:
+                missing_composers.add(row['mutopiacomposer'])
 
-        elif row['omit?'] != 'T' and row['new?'] == 'T':
-            id = int(row['id'])
-            count += 1
-            print(
-                # count,
-                # row['id'],
-                # int(row['id']) in oldIds,
-                # row['mutopiacomposer'],
-                composerLookupNewAdds[row['mutopiacomposer']] +  ' | ' +
-                row['cn-title'] + ' | ' +
-                row['cn-instrument'])
+            elif row['omit?'] != 'T' and row['new?'] == 'T':
+                count += 1
+                print(
+                    # count,
+                    # row['id'],
+                    # int(row['id']) in oldIds,
+                    # row['mutopiacomposer'],
+                    composer_lookup[row['mutopiacomposer']] +  ' | ' +
+                    row['cn-title'] + ' | ' +
+                    row['cn-instrument'])
 
-print(str(count) + ' new additions.')
-if len(missingComposers) > 0:
-    print('PROBLEM: MISSING COMPOSERS:')
-    print(missingComposers)
-else:
-    print('No missing composers.')
-print('Done with new additions report, beginning JSON generation.\n')
+    print(str(count) + ' new additions.')
+    if len(missing_composers) > 0:
+        print('PROBLEM: MISSING COMPOSERS:')
+        print(missing_composers)
+    else:
+        print('No missing composers.')
+    print('Done with new additions report, beginning JSON generation.\n')
 
-# END OF NEW ADDS REPORT GENERATION
+# JSON GENERATION
 
-
-# BEGIN JSON GENERATION
-
-inst_regex = re.compile('[a-zA-Z\-]+')
-
-noInstrumentMatch = []
-unrecognizedInstTokens = set()
-
-# todo: Lute isn't found
+# TODO: Lute isn't found
 # 'Lute / Theorbo / Vihuela'
 # Vihuela
 
-def instClassifier(mutopiainstrument, id):
-    insts = []
-    mutoInst = mutopiainstrument
-    for i in two_word_insts:
-        if i in mutoInst:
-            hyphenated = i.replace(" ", "-")
-            mutoInst = mutoInst.replace(i, hyphenated)
+def inst_classifier(mutopiainstrument, id):
+    no_instrument_match = []
+    unrecognized_inst_tokens = set()
 
-    tokens = inst_regex.findall(mutoInst)
+    insts = []
+    muto_inst = mutopiainstrument
+    for i in two_word_insts:
+        if i in muto_inst:
+            hyphenated = i.replace(" ", "-")
+            muto_inst = muto_inst.replace(i, hyphenated)
+
+    tokens = regexes['instrument'].findall(muto_inst)
     for t in tokens:
         t = t.capitalize()
         if t.endswith('s') and not t.endswith('ss'):
@@ -72,210 +71,200 @@ def instClassifier(mutopiainstrument, id):
         if t in instrument_list:
             insts.append(t)
         else:
-            unrecognizedInstTokens.add(t)
+            unrecognized_inst_tokens.add(t)
 
     if insts == []:
-        noInstrumentMatch.append([id, mutoInst])
-    # print(insts)
-    return insts
+        no_instrument_match.append([id, muto_inst])
+
+    return insts, no_instrument_match, unrecognized_inst_tokens
 
 
-instrumentTally = {}
-styleTally = {}
-composerTally = {}
+def make_json_file(csvfile, jsfile):
+    instrument_tally = {}
+    style_tally = {}
+    composer_tally = {}
+    # dict/object has ids as keys that map to lists/arrays of data for each item
+    items_dict = {}
+    # a list/array of ids ordered into the default sort order for 'browsing'
+    items_sorted_ids = []
 
-with open(fullCSV, newline='') as csvfile:
-    reader = csv.DictReader(csvfile)
-    # recsObject - an object with ids as keys that map to arrays of data for each item
-    recsObject = {}
-    # recsIdArray - an array of mutopia ids ordered into the default sort order for 'browsing'
-    recsSortedIds = []
+    with open(csvfile, newline='') as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            if row['omit?'] != 'T':
 
-    for row in reader:
-        if row['omit?'] != 'T':
+                ID = int(row['id'])
+                items_sorted_ids.append(ID);
 
-            # IDs for the ordered array
-            recsSortedIds.append(int(row['id']));
+                # INSTRUMENTS
+                insts, no_instrument_match, unrecognized_inst_tokens = inst_classifier(row['cn-instrument'], row['id'])
+                for i in insts:
+                    if i in instrument_tally:
+                        instrument_tally[i] += 1
+                    else:
+                        instrument_tally[i] = 1
 
-            # INSTRUMENTS
-            insts = instClassifier(row['cn-instrument'], row['id'])
-            for i in insts:
-                if i in instrumentTally:
-                    instrumentTally[i] += 1
+                # STYLES
+                # handle style 'Popular / Dance' that contains forward slash
+                stl = row['cn-style'].replace(' / ', '')
+                if stl in style_tally:
+                    style_tally[stl] += 1
                 else:
-                    instrumentTally[i] = 1
+                    style_tally[stl] = 1
 
-            # STYLES
-            # handle style 'Popular / Dance'
-            stl = row['cn-style'].replace(' / ', '')
-            if stl in styleTally:
-                styleTally[stl] += 1
-            else:
-                styleTally[stl] = 1
+                # COMPOSERS
+                comp = row['mutopiacomposer']
+                if comp in composer_tally:
+                    composer_tally[comp] += 1
+                else:
+                    composer_tally[comp] = 1
 
-            # COMPOSERS
-            comp = row['mutopiacomposer']
-            if comp in composerTally:
-                composerTally[comp] += 1
-            else:
-                composerTally[comp] = 1
+                multifile = (1 < len(row['filename'].split(',,, ')))
 
-            multifile = (1 < len(row['filename'].split(',,, ')))
+                items_dict[ID] = [
+                     stl,
+                     comp, # 1
+                     row['cn-title'],
+                     insts, # 3
+                     row['path'], # 4
+                     False if multifile else row['filename'][:-3],
+                     row['license-type'] + row['license-vsn'], # 6
+                     row['cn-opus'],
+                     row['cn-poet'], # 8
+                     row['date'],
+                     row['arranger'], # 10
+                ]
 
-            recsObject[ int(row['id']) ] = [
-                 stl,
-                 comp, # 1
-                 row['cn-title'],
-                 insts, # 3
-                 # instsCSS, # instrument classes
-                 row['path'], # 4
-                 False if multifile else row['filename'][:-3],
-                 row['license-type'] + row['license-vsn'], # 6
-                 row['cn-opus'],
-                 row['cn-poet'], # 8
-                 row['date'],
-                 row['arranger'], # 10
-                 ]
-
-    out = json.dumps(recsObject)
+    json_out = json.dumps(items_dict)
     print('JSON parsed.')
 
-    f = open(targetJSON, 'w')
-    f.write('var recsjson = ' + out)
-    f.write('\nvar recsSortedIds = ' + json.dumps(recsSortedIds))
-    print('JSON saved.')
-
-
-    # print(instrumentTally)
     print('\nEach piece has to have at least one instrument that is recognized.')
-    print('Pieces with no instrument recognized (fix these):', sorted(noInstrumentMatch))
+    print('Pieces with no instrument recognized (fix these):', sorted(no_instrument_match))
 
     print('\nA piece may have other instruments that are not recognized.  (Optionally add these.)')
-    print('Unrecognized Instruments:', sorted(unrecognizedInstTokens))
+    print('Unrecognized Instruments:', sorted(unrecognized_inst_tokens))
 
-    # composer lookup table also goes in json data file
-    composerLookup = {}
-    composerLookupText = ''
+    with open(jsfile, 'w') as f:
+        f.write('var recsjson = ' + json_out)
+        f.write('\nvar items_sorted_ids = ' + json.dumps(items_sorted_ids))
+        print('JSON saved.')
 
-    for c in composer_list:
-        if c[0] in composerTally:
-            composerLookup[c[0]] = ['{0} {1}'.format(c[2], c[1]), '{0}'.format(c[3])]
+        # composer lookup table also goes in json data file
+        composer_lookup = {}
+        composer_lookup_text = ''
 
-    composerLookupText = json.dumps(composerLookup)
-    f.write('\nvar composerLookup = ' + composerLookupText)
+        for c in composer_list:
+            if c[0] in composer_tally:
+                composer_lookup[c[0]] = ['{0} {1}'.format(c[2], c[1]), '{0}'.format(c[3])]
 
-    print('\nComposerLookup saved in JS file.')
+        composer_lookup_text = json.dumps(composer_lookup)
+        f.write('\nvar composer_lookup = ' + composer_lookup_text)
 
+        print('\nComposerLookup saved in JS file.')
 
+    return style_tally, instrument_tally, composer_tally
 
 # OUTPUT CHECKBOXES HTML
 
-htmlOut = ''
-ulOpen = '<ul class="filter-panel">\n'
-ulClose = '</ul>\n\n'
-formCloseDivClose = '</form>\n</div>\n\n'
-liAlphabetA = '<li class="filter-panel-header">'
-liAlphabetB = '</li>\n'
+def html_filter_div_start(div_id, h3_text, all_id, none_id, form_id):
+    return (
+        '<div id="' + div_id +'" class="filters">\n' +
+        # todo: when needed handle PopularDance --> 'Popular / Dance'
+        '<h3 class="filter-panel-header-main">' + h3_text + '</h3>\n' +
+        '<span class="filter-panel-select-all">' +
+        '<a id="' + all_id + '">Select All</a> &nbsp; <a id="' + none_id + '">Deselect All</a>' +
+        '</span>\n' +
+        '<form name="' + form_id + '" id="' + form_id + '">\n\n'
+    )
+
+def html_li(text, tally, name):
+    return (
+        '<li><input type="checkbox" name="' + name + '" id="' + text + '" />' +
+        '<a class="f-link">' + text + ' [' + str(tally) + ']</a></li>\n'
+    )
+
+def html_checkboxes(ul_open, ul_close, form_close_div_close, tally, item_list, group_size, name_field):
+    html = ul_open
+    count = 0
+    for n in item_list:
+        html += html_li(n, tally[n], name_field)
+        count += 1
+        if count % group_size == 0:
+            html += ul_close + ul_open
+    html += ul_close + form_close_div_close
+    return html
+
+def html_checkboxes_composers(ul_open, ul_close, form_close_div_close, composer_tally, composer_list, group_size, name_field):
+    li_alphabet_a = '<li class="filter-panel-header">'
+    li_alphabet_b = '</li>\n'
+    html = ''
+
+    composer_short_list = list(filter(lambda x: x[0] in composer_tally, composer_list))
+    composer_shortest_list  = list(map(lambda x: x[0], composer_short_list))
+
+    # from_letters and to_letters contain lists of the letters that go in the alphabetical headings for each group
+    # from_letters = the first letter and every nth letter beyond that
+    # to_letters = the (nth - 1) letter and every nth letter beyond that
+    # we just delete them off the front of the list as they are used
+    from_letters = list(map(lambda x: x[0], composer_shortest_list[::group_size]))
+    to_letters   = list(map(lambda x: x[0], composer_shortest_list[(group_size - 1)::group_size]))
+    to_letters.append(composer_shortest_list[-1:][0][0])
+
+    count = 0
+    for c in composer_short_list:
+        if count % group_size == 0 and len(from_letters) > 0 and len(to_letters) > 0:
+            if count == 0:
+                html += ul_open
+            else:
+                html += ul_close + ul_open
+
+            html += li_alphabet_a + from_letters[0] + ' - ' + to_letters[0] + li_alphabet_b
+            del from_letters[0]
+            del to_letters[0]
+
+        li_text = c[1] + ", " + c[2] + " " + c[3]
+        html += html_li(li_text, composer_tally[c[0]], name_field)
+        count += 1
+
+    html += ul_close + form_close_div_close
+    return html
+
+def html_main(style_tally, style_list, instrument_tally, instrument_list, composer_tally, composer_list):
+    ul_open = '<ul class="filter-panel">\n'
+    ul_close = '</ul>\n\n'
+    form_close_div_close = '</form>\n</div>\n\n'
+
+    style_short_list = list(filter(lambda x: x in style_tally, style_list))
+    instrument_short_list = list(filter(lambda x: x in instrument_tally, instrument_list))
+    html = (
+        html_filter_div_start('style-filters', 'Filter by Style', 's-all', 's-none', 'style-form') +
+        html_checkboxes(ul_open, ul_close, form_close_div_close, style_tally, style_short_list, 6, 's-box') +
+        html_filter_div_start('instrument-filters', 'Filter by Instrument', 'i-all', 'i-none', 'instrument-form') +
+        html_checkboxes(ul_open, ul_close, form_close_div_close, instrument_tally, instrument_short_list, 9, 'i-box') +
+        html_filter_div_start('composer-filters', 'Filter by Composer', 'c-all', 'c-none', 'composer-form') +
+        html_checkboxes_composers(ul_open, ul_close, form_close_div_close, composer_tally, composer_list, 10, 'c-box')
+    )
+    return html
 
 
-## STYLES
+def main(args):
+    try:
+        style_tally, instrument_tally, composer_tally = make_json_file(args.csvfile, args.jsfile)
 
-styleGroupSize = 6
-styleShortList = list(filter(lambda x: x in styleTally, style_list))
-count = 0
-htmlOut += '<div id="style-filters" class="filters">\n'
-# todo: when needed handle PopularDance --> 'Popular / Dance'
-htmlOut += '<h3 class="filter-panel-header-main">Filter by Style</h3>\n'
-htmlOut += '<span class="filter-panel-select-all"><a id="s-all">Select All</a> &nbsp; <a id="s-none">Deselect All</a></span>\n'
-htmlOut += '<form name="style-form" id="style-form">\n\n'
-htmlOut += ulOpen
-for s in styleShortList:
-    htmlOut += '<li><input type="checkbox" name="s-box" id="{0}" /><a class="f-link">{0} [{1}]</a></li>\n'.format(s, styleTally[s])
-    count += 1
-    if count % styleGroupSize == 0:
-        htmlOut += ulClose + ulOpen
-htmlOut += ulClose
-htmlOut += formCloseDivClose
+        if args.mode == 'mutopia':
+            html = html_main(style_tally, style_list, instrument_tally, instrument_list, composer_tally, composer_list)
+            with open(args.htmlfile, 'w') as h:
+                h.write(html)
+            report_new_additions(args.csvfile)
 
+        elif args.mode == 'thesession':
+            pass
 
-## INSTRUMENTS
-
-instrumentGroupSize = 9
-instrumentShortList = list(filter(lambda x: x in instrumentTally, instrument_list))
-count = 0
-htmlOut += '<div id="instrument-filters" class="filters">\n'
-htmlOut += '<h3 class="filter-panel-header-main">Filter by Instrument</h3>\n'
-htmlOut += '<span class="filter-panel-select-all"><a id="i-all">Select All</a> &nbsp; <a id="i-none">Deselect All</a></span>\n'
-htmlOut += '<form name="instrument-form" id="instrument-form">\n\n'
-htmlOut += ulOpen
-for i in instrumentShortList:
-    htmlOut += '<li><input type="checkbox" name="i-box" id="{0}" /><a class="f-link">{0} [{1}]</a></li>\n'.format(i, instrumentTally[i])
-    count += 1
-    if count % instrumentGroupSize == 0:
-        htmlOut += ulClose + ulOpen
-htmlOut += ulClose
-htmlOut += formCloseDivClose
-
-
-## COMPOSERS
-
-composerGroupSize = 10
-composerShortList = list(filter(lambda x: x[0] in composerTally, composer_list))
-compShortestList  = list(map(lambda x: x[0], composerShortList))
-
-# fromLetters and toLetters contain lists of the letters that go in the alphabetical headings for each group
-# fromLetters = the first letter and every nth letter beyond that
-# toLetters = the (nth - 1) letter and every nth letter beyond that
-# we just delete them off the front of the list as they are used
-fromLetters       = list(map(lambda x: x[0], compShortestList[::composerGroupSize]))
-toLetters         = list(map(lambda x: x[0], compShortestList[(composerGroupSize - 1)::composerGroupSize]))
-toLetters.append(compShortestList[-1:][0][0])
-count = 0
-
-htmlOut += '<div id="composer-filters" class="filters">\n'
-htmlOut += '<h3 class="filter-panel-header-main">Filter by Composer</h3>\n'
-htmlOut += '<span class="filter-panel-select-all"><a id="c-all">Select All</a> &nbsp; <a id="c-none">Deselect All</a></span>\n'
-htmlOut += '<form name="composer-form" id="composer-form">\n\n'
-
-for c in composerShortList:
-    if count % composerGroupSize == 0 and len(fromLetters) > 0 and len(toLetters) > 0:
-        if count == 0:
-            htmlOut += ulOpen
         else:
-            htmlOut += ulClose + ulOpen
+            raise ValueError("Oops! We need a valid mode argument, either 'mutopia' or 'thesession'.")
 
-        htmlOut += liAlphabetA + fromLetters[0] + ' - ' + toLetters[0] + liAlphabetB
-        del fromLetters[0]
-        del toLetters[0]
+    except ValueError as err:
+        print(err.args)
 
-    htmlOut += '<li><input type="checkbox" name="c-box" id="{0}" /><a class="f-link">{1}, {2} {3} [{4}]</a></li>\n'.format(c[0], c[1], c[2], c[3], composerTally[c[0]])
-    count += 1
-
-htmlOut += ulClose
-htmlOut += formCloseDivClose
-
-h = open(targetHTML, 'w')
-h.write(htmlOut)
-
-
-'''
-    unrecognized instrument tokens results:
-
-    # April5-2016 ['Chamber', 'Male',
-                   'Also', 'Alti', 'Amore', 'And', 'Baritone', 'Basset', 'Bassi', 'Basso', 'Classical', 'Clavichord', 'Continuo', 'D', 'Duet', 'F', 'For', 'French', 'In', 'Or', 'Sa', 'Satb', 'Solo', 'Soprani', 'Soprano', 'Tenor', 'Tenori', 'Transcribed', 'Triangle', 'Ttbb', 'Tttb', 'Two']
-
-    # June17-2015 ['Also', 'Alti', 'Amore', 'And', 'Baritone', 'Basset', 'Bassi', 'Basso', 'Classical', 'Clavichord', 'Continuo', 'D', 'Duet', 'F', 'For', 'French', 'In', 'Or', 'Sa', 'Satb', 'Solo', 'Soprani', 'Soprano', 'Tenor', 'Tenori', 'Transcribed', 'Triangle', 'Ttbb', 'Tttb', 'Two']
-
-    # June16-2015: {'Tttb', 'Soprano', 'Classical', 'F', 'Tenor', 'Alti', 'String', 'And', 'Clavichord', 'Ensemble', 'In', 'Satb', 'Baritone', 'D', 'Amore', 'For', 'Bassi', 'Basso', 'Continuo', 'Or', 'Ttbb', 'Transcribed', 'Tenori', 'French', 'Quartet', 'Sa', 'Basset', 'Two', 'Soprani', 'Also', 'Duet', 'Solo', 'Triangle'}
-
-    # OLD {'Duet', 'For', 'Vihuela', 'Basso', 'Ttbb', 'Transcribed', 'Two', 'Sa', 'Tttb', 'And', 'Soprano', 'Clavichord', 'Satb', 'Continuo'}
-
-'''
-
-
-'''
-#   "style", "mutopiacomposer", "composer", "mutopiatitle", "title", "mutopiainstrument", "instrument", "mutopia-id", "mutopiaopus", "opus", "mutopiapoet", "poet", "date", "source", "license-type", "license-vsn", "license", "copyright", "arranger", "footer", "version", "filename", "path"
-'''
-
-# see this script about csv to json in python
-# http://www.andymboyle.com/2011/11/02/quick-csv-to-json-parser-in-python/
+if __name__ == "__main__":
+    main(parser.parse_args())
