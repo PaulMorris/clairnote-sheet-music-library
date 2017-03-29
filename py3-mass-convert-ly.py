@@ -19,7 +19,7 @@ with open(sourceCSV, newline='') as csvfile:
             # pathToLy = pathToDir + row['filename']
             # stripFileName = row['filename'].split('.')
             # print(stripFileName[0])
-            # print(row['mutopia-id'])
+            # print(row['id'])
 
             # get list of all .ly and .ily files in directory and subdirectories
             lyFileList = []
@@ -37,16 +37,17 @@ with open(sourceCSV, newline='') as csvfile:
                 # print(lyFileList)
 
             # print(row['ly-version'])
-            # if row['mutopia-id'] == '334':
+            # if row['id'] == '334':
             # if len(lyFileList) > 1:
 
             print('____________________________')
-            print(row['mutopia-id'])
+            print(row['id'])
             print(row['parse-order'], ': ', row['mutopiacomposer'], row['cn-title'])
             print('')
 
             for filepath in lyFileList:
-                output = subprocess.call(['convert-ly', '-e',
+                output = subprocess.call(['convert-ly',
+                                          '-e',
                                           '--from=' + row['ly-version'],
                                           '--to=' + newvsn, filepath])
                 print(output)

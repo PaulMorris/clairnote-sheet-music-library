@@ -28,7 +28,7 @@ parser.add_argument("-l", "--earliest-ly-version", help="The earliest LilyPond v
 
 def get_csv_keys(mode):
     lookup = {
-        'mutopia': ['mutopia-id', 'parse-order', 'omit?', 'omit-reason', 'new?', 'error-status?', 'flagged?',
+        'mutopia': ['id', 'parse-order', 'omit?', 'omit-reason', 'new?', 'error-status?', 'flagged?',
                     'cn-code', 'ly-version', 'mutopiacomposer', 'cn-title', 'cn-opus', 'path', 'filename',
                     'cn-style', 'cn-instrument',
                     'cn-poet', 'license-type', 'license-vsn', 'cn-license', 'mtime',
@@ -38,7 +38,7 @@ def get_csv_keys(mode):
 
         'thesession': ['id', 'tune-id', 'setting-id', 'parse-order',
             'omit?', 'omit-reason', 'new?', 'error-status?', 'flagged?',
-            'cn-code', 'ly-version', 'path', 'filename', 'mtime',
+            'cn-code', 'ly-version', 'path', 'filename', 'mtime', 'cn-title',
             # these are the actual header fields in the session ly files,
             # book and footnotes are rarely used
             'title', 'subtitle', 'crossRefNumber', 'tagline', 'footnotes', 'book',
@@ -111,8 +111,8 @@ def make_row(lyfilenames, dirpath, rootdir, mode, csv_keys):
     row['path'] = dirpath[len(rootdir):].lstrip(os.path.sep)
 
     if mode == 'mutopia':
-        # extract mutopia-id from footer field
-        row['mutopia-id'] = regex_search(regexes['muto_id'], row['footer']) or ''
+        # extract mutopia id from footer field
+        row['id'] = regex_search(regexes['muto_id'], row['footer']) or ''
         row = add_cn_fields(row)
         row = add_license_data(row)
         print(dirpath, "   ", rootdir, "   ", row['path'])
@@ -122,6 +122,8 @@ def make_row(lyfilenames, dirpath, rootdir, mode, csv_keys):
         row['tune-id'] = match.group(1)
         row['setting-id'] = match.group(2)
         row['id'] = match.group(1) + '-' + match.group(2)
+        # use cn-title for consistency with mutopia csv key
+        row['cn-title'] = row['title']
 
     return row, relevant_conflicts
 
@@ -211,10 +213,7 @@ def main(args):
               '\nsubdirectory skips:', subdir_skips or 'not applicable', '(skipped pieces that have hierarchical directories of ly files)')
 
         # MERGE IN PREVIOUS CSV META DATA AND MARK NEW ITEMS
-        # TODO: use 'id' instead of 'mutopia-id' ? requires data migration...
-        id_field = 'mutopia-id' if args.mode == 'mutopia' else 'id'
-
-        final_csv_data = merge_csv_data(args.csv_previous, csv_data, id_field) if args.csv_previous else csv_data
+        final_csv_data = merge_csv_data(args.csv_previous, csv_data, 'id') if args.csv_previous else csv_data
 
         # GENERATE CSV FILE
         with open(args.csv_output or 'csv-output.csv', 'w') as csvfile:

@@ -208,6 +208,17 @@ def get_most_recent_mtime(files, dirpath):
     # ctime = last time a file's metadata was changed (owner, permissions, etc.)
     # row['ctime'] = os.path.getctime(os.path.join(dirpath, fname))
 
+def create_directories(fullpath):
+    ''' The fullpath arg includes the file name and extension. '''
+    path, filename = os.path.split(fullpath)
+    if not os.path.exists(path):
+        os.makedirs(path, mode=0o777, exist_ok=True)
+
+def remove_file(f):
+    ''' Delete a file if it already exists. '''
+    if os.path.isfile(f):
+        os.remove(f)
+
 
 # unused functions
 """

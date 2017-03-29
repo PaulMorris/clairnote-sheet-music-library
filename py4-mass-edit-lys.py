@@ -33,7 +33,7 @@ def mutopia_cc(row):
             fullcc = cc1 + ccLookup[ccKey] + cc2
             return fullcc
         else:
-            print('Copyright problem, Mutopia ID: ', row['mutopia-id'])
+            print('Copyright problem, Mutopia ID: ', row['id'])
             ValueError("Oops! Error with copyright problem...")
     # TODO: get a better error type
     except ValueError as err:
@@ -48,7 +48,7 @@ def handle_line_mutopia(line, newf, old_mutopia_footer, is_topfile, row):
         # make sure the line doesn't match more than one of these cases
         if Counter([copyright_case, tagline_case, version_case])[True] > 1:
             print('Oops! A file has too many header fields on one line.')
-            print('id:', row['mutopia-id'], 'path:', path_to_ly)
+            print('id:', row['id'], 'path:', path_to_ly)
             ValueError("Oops!")
 
         # add spaces for these cases
@@ -128,7 +128,7 @@ def handle_line_session(line, newf, row):
         # make sure the line doesn't match more than one of these cases
         if Counter([subtitle_case, tagline_case, version_case])[True] > 1:
             print('Oops! A file has too many header fields on one line.')
-            print('id:', row['mutopia-id'], 'path:', path_to_ly)
+            print('id:', row['id'], 'path:', path_to_ly)
             ValueError("Oops!")
 
         # add spaces for these cases

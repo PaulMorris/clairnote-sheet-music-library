@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from subprocess import run, PIPE, STDOUT
 import csv, os, re, argparse, subprocess
-from py_ly_parsing import regexes
+from py_ly_parsing import regexes, create_directories, remove_file
 
 parser = argparse.ArgumentParser()
 
@@ -38,11 +38,6 @@ parser.add_argument("--ly-stable", help="Stable LilyPond executable", default='l
 parser.add_argument("--ly-dev", help="Development LilyPond executable", default='lilypond')
 parser.add_argument("--stable-version", help="Should be only the first four characters (e.g. '2.18')", default='2.18')
 
-
-def remove_file(f):
-    ''' Delete a file if it already exists. '''
-    if os.path.isfile(f):
-        os.remove(f)
 
 ## error detection notes
 # 3 files out of 480 files have this:
@@ -159,7 +154,7 @@ def get_row_log_header(row, lyfile):
     return [
         '----------------------------',
         '____________________________',
-        row['mutopia-id'],
+        row['id'],
         row['parse-order'],
         row['cn-title'],
         os.path.join(row['path'], lyfile)
@@ -168,12 +163,12 @@ def get_row_log_header(row, lyfile):
 def run_lilypond_and_log(command, logfile, row, lyfile, errorfile):
     console_out = run_command(command)
     log_lines(console_out, logfile)
-    problem_ids = error_check(console_out, row['mutopia-id'], os.path.join(row['path'], lyfile), errorfile)
+    problem_ids = error_check(console_out, row['id'], os.path.join(row['path'], lyfile), errorfile)
     return problem_ids
 
 def handle_rows(rows, args):
     ''' args includes: rootdir, logfile, midi, midionly, noletter, noa4,
-                       errorfile, ly_stable, ly_dev, stable_version ''' 
+                       errorfile, ly_stable, ly_dev, stable_version '''
     problem_file_ids = set()
     for row in rows:
         lyfilenames = row['filename'].split(',,, ')
@@ -214,7 +209,6 @@ def handle_rows(rows, args):
 
     return problem_file_ids
 
-
 def write_error_file(errorfile, problem_file_ids):
     with open(errorfile, "a") as err:
         err.write('Error Log\n\n')
@@ -226,12 +220,14 @@ def update_csv(problem_file_ids, oldcsv, newcsv, logfile):
     ''' Indicate error files in csv. '''
     log_lines(['Omitting problem files in CSV file...', 'IDs of problem files:'], logfile)
 
+    create_directories(newcsv)
+
     with open(oldcsv, newline='') as oldf, open(newcsv, 'w') as newf:
         reader = csv.DictReader(oldf)
         writer = csv.DictWriter(newf, fieldnames = reader.fieldnames)
         writer.writeheader()
         for row in reader:
-            ID = row['mutopia-id']
+            ID = row['id']
             # for rows with empty string '' as ids, better to fix upstream
             if len(ID) > 0:
                 if ID in problem_file_ids:

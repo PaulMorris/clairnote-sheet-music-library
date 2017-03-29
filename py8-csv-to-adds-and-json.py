@@ -23,12 +23,12 @@ with open(fullCSV, newline='') as source:
             missingComposers.add(row['mutopiacomposer'])
 
         elif row['omit?'] != 'T' and row['new?'] == 'T':
-            id = int(row['mutopia-id'])
+            id = int(row['id'])
             count += 1
             print(
                 # count,
-                # row['mutopia-id'],
-                # int(row['mutopia-id']) in oldIds,
+                # row['id'],
+                # int(row['id']) in oldIds,
                 # row['mutopiacomposer'],
                 composerLookupNewAdds[row['mutopiacomposer']] +  ' | ' +
                 row['cn-title'] + ' | ' +
@@ -95,10 +95,10 @@ with open(fullCSV, newline='') as csvfile:
         if row['omit?'] != 'T':
 
             # IDs for the ordered array
-            recsSortedIds.append(int(row['mutopia-id']));
+            recsSortedIds.append(int(row['id']));
 
             # INSTRUMENTS
-            insts = instClassifier(row['cn-instrument'], row['mutopia-id'])
+            insts = instClassifier(row['cn-instrument'], row['id'])
             for i in insts:
                 if i in instrumentTally:
                     instrumentTally[i] += 1
@@ -122,7 +122,7 @@ with open(fullCSV, newline='') as csvfile:
 
             multifile = (1 < len(row['filename'].split(',,, ')))
 
-            recsObject[ int(row['mutopia-id']) ] = [
+            recsObject[ int(row['id']) ] = [
                  stl,
                  comp, # 1
                  row['cn-title'],
