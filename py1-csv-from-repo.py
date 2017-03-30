@@ -38,7 +38,8 @@ def get_csv_keys(mode):
 
         'thesession': ['id', 'tune-id', 'setting-id', 'parse-order',
             'omit?', 'omit-reason', 'new?', 'error-status?', 'flagged?',
-            'cn-code', 'ly-version', 'path', 'filename', 'mtime', 'cn-title',
+            'cn-code', 'ly-version', 'path', 'filename', 'setting-number',
+            'mtime', 'cn-title',
             # these are the actual header fields in the session ly files,
             # book and footnotes are rarely used
             'title', 'subtitle', 'crossRefNumber', 'tagline', 'footnotes', 'book',
@@ -122,6 +123,7 @@ def make_row(lyfilenames, dirpath, rootdir, mode, csv_keys):
         row['tune-id'] = match.group(1)
         row['setting-id'] = match.group(2)
         row['id'] = match.group(1) + '-' + match.group(2)
+        row['setting-number'] = int(regexes['setting-number'].search(row['filename']).group(1))
         # use cn-title for consistency with mutopia csv key
         row['cn-title'] = row['title']
 

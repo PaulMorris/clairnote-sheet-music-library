@@ -6,7 +6,7 @@ regexes = {
     'raw_version': re.compile("\\\\version.*?\".*?\""),
     'version_digits': re.compile("[0-9]*\.[0-9]*\.[0-9]*"),
     'header': re.compile("\\\\header.*", re.DOTALL),
-    'quote': re.compile("\".*\""),
+    'quote': re.compile("\"(.*)\""),
     'header_fields': re.compile("\S.*?=.*?\".*?\""),
     'header_field_key': re.compile(".*?[\s|=]"),
     'header_field_val': re.compile("\".*\""),
@@ -36,7 +36,10 @@ regexes = {
     'compression2': re.compile('.*warning: page.*has been compressed.*'),
 
     'ambitus': re.compile('.*Ambitus_engraver.*'),
-    'instrument': re.compile('[a-zA-Z\-]+')
+    'instrument': re.compile('[a-zA-Z\-]+'),
+
+    # for 'the session' files
+    'setting-number': re.compile(r'-([0-9]*).ly$')
 }
 
 def regex_search(r, s):

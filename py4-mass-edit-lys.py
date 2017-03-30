@@ -138,11 +138,10 @@ def handle_line_session(line, newf, row):
 
         # subtitle becomes a reference to the source url
         if subtitle_case:
-            # a single space subtitle puts some space between the title and the first system
+            # TODO: a single space subtitle puts some space between the title and the first system... Ugh
             newf.write(s + 'subtitle = " "\n')
             newf.write(s + 'source = "' + row['subtitle'] + '"\n')
-            # cc = old_mutopia_cc(row) if old_mutopia_footer else mutopia_cc(row)
-            # newf.write(s + cc + '\n')
+            newf.write(s + 'arranger = ' + 'Setting ' + str(row['setting-number']))
 
         # tagline
         elif tagline_case:
