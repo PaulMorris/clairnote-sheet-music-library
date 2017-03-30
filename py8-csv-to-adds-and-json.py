@@ -11,7 +11,21 @@ parser.add_argument("--htmlfile", help = "Path to the new HTML file (output)")
 
 # GENERATE NEW ADDS REPORT
 
-def report_new_additions(csvfile):
+def report_new_additions_session(csvfile):
+    count = 0
+    with open(csvfile, newline='') as source:
+        reader = csv.DictReader(source)
+        for row in reader:
+
+            if row['omit?'] != 'T' and row['new?'] == 'T':
+                count += 1
+                print(row['cn-title'])
+
+    print(str(count) + ' new additions.')
+    print('Done with new additions report, beginning JSON generation.\n')
+
+
+def report_new_additions_mutopia(csvfile):
     composer_lookup = {}
     for c in composer_list:
         # no dates in this listing, keep it simple
@@ -47,6 +61,36 @@ def report_new_additions(csvfile):
     print('Done with new additions report, beginning JSON generation.\n')
 
 # JSON GENERATION
+
+def make_json_file_session(csvfile, jsfile):
+    # dict/object has ids as keys that map to lists/arrays of data for each item
+    items_dict = {}
+    # a list/array of ids ordered into the default sort order for 'browsing'
+    items_sorted_ids = []
+
+    with open(csvfile, newline='') as csvf:
+        reader = csv.DictReader(csvf)
+        for row in reader:
+            if row['omit?'] != 'T':
+
+                ID = int(row['id'])
+                items_sorted_ids.append(ID);
+
+                items_dict[ID] = [
+                     row['cn-title'],
+                     row['filename'][:-3],
+                     # TODO:
+                     # row['setting-number']
+                ]
+
+    json_out = json.dumps(items_dict)
+    print('CSV data parsed.')
+
+    with open(jsfile, 'w') as f:
+        f.write('var items_session = ' + json_out)
+        f.write('\nvar items_sorted_ids_session = ' + json.dumps(items_sorted_ids))
+        print('JS file saved.')
+
 
 # TODO: Lute isn't found
 # 'Lute / Theorbo / Vihuela'
@@ -88,8 +132,8 @@ def make_json_file(csvfile, jsfile):
     # a list/array of ids ordered into the default sort order for 'browsing'
     items_sorted_ids = []
 
-    with open(csvfile, newline='') as csvfile:
-        reader = csv.DictReader(csvfile)
+    with open(csvfile, newline='') as csvf:
+        reader = csv.DictReader(csvf)
         for row in reader:
             if row['omit?'] != 'T':
 
@@ -164,7 +208,7 @@ def make_json_file(csvfile, jsfile):
 
     return style_tally, instrument_tally, composer_tally
 
-# OUTPUT CHECKBOXES HTML
+# OUTPUT FILTERS CHECKBOXES HTML
 
 def html_filter_div_start(div_id, h3_text, all_id, none_id, form_id):
     return (
@@ -249,16 +293,16 @@ def html_main(style_tally, style_list, instrument_tally, instrument_list, compos
 
 def main(args):
     try:
-        style_tally, instrument_tally, composer_tally = make_json_file(args.csvfile, args.jsfile)
-
         if args.mode == 'mutopia':
+            style_tally, instrument_tally, composer_tally = make_json_file(args.csvfile, args.jsfile)
             html = html_main(style_tally, style_list, instrument_tally, instrument_list, composer_tally, composer_list)
             with open(args.htmlfile, 'w') as h:
                 h.write(html)
-            report_new_additions(args.csvfile)
+            report_new_additions_mutopia(args.csvfile)
 
         elif args.mode == 'thesession':
-            pass
+            make_json_file_session(args.csvfile, args.jsfile)
+            report_new_additions_session(args.csvfile)
 
         else:
             raise ValueError("Oops! We need a valid mode argument, either 'mutopia' or 'thesession'.")
