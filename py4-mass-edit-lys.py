@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import csv, os, re, argparse, shutil
-from collections import Counter
 from py_ly_parsing import get_ly_filenames, regexes
 
 # COMMAND LINE ARGUMENTS
@@ -46,7 +45,7 @@ def handle_line_mutopia(line, newf, old_mutopia_footer, is_topfile, row):
     version_case = is_topfile and regexes['raw_version'].search(line)
     try:
         # make sure the line doesn't match more than one of these cases
-        if Counter([copyright_case, tagline_case, version_case])[True] > 1:
+        if [copyright_case, tagline_case, version_case].count(True) > 1:
             print('Oops! A file has too many header fields on one line.')
             print('id:', row['id'], 'path:', path_to_ly)
             ValueError("Oops!")
@@ -124,24 +123,23 @@ def handle_line_session(line, newf, row):
     subtitle_case = regexes['subtitle'].search(line)
     tagline_case = regexes['tagline'].search(line)
     version_case = regexes['raw_version'].search(line)
+    meter_case = regexes['meter'].search(line)
     try:
         # make sure the line doesn't match more than one of these cases
-        if Counter([subtitle_case, tagline_case, version_case])[True] > 1:
+        if [subtitle_case, tagline_case, version_case, meter_case].count(True) > 1:
             print('Oops! A file has too many header fields on one line.')
             print('id:', row['id'], 'path:', path_to_ly)
             ValueError("Oops!")
 
         # add spaces for these cases
-        if subtitle_case or tagline_case:
+        if subtitle_case or tagline_case or meter_case:
             sp = regexes['spaces'].search(line)
             s = sp.group()[0:-1]
 
         # subtitle becomes a reference to the source url
         if subtitle_case:
-            # TODO: a single space subtitle puts some space between the title and the first system... Ugh
-            newf.write(s + 'subtitle = " "\n')
             newf.write(s + 'source = "' + row['subtitle'] + '"\n')
-            newf.write(s + 'arranger = ' + 'Setting ' + str(row['setting-number']))
+            newf.write(s + 'arranger = ' + '\"Setting ' + str(row['setting-number']) + '\"\n')
 
         # tagline
         elif tagline_case:
@@ -149,9 +147,16 @@ def handle_line_session(line, newf, row):
             newf.write(s + tagline + '\n')
 
         # clairnote code
-        elif version_case:
+        elif version_case and row['cn-code'] != 'True':
             newf.write(line)
             newf.write(r'\include "clairnote-code.ly"' + '\n')
+
+        # meter (jig, reel, etc.)
+        # for capitalization, the value stored in the CSV is already capitalized
+        elif meter_case:
+            # another possibility:
+            # value = regexes['meter'].match(line).group(1).capitalize()
+            newf.write(s + "meter = \"" + row['meter'] + "\"\n")
 
         # else straight copy
         else:

@@ -13,7 +13,7 @@ parser.add_argument("mode", help = "The mode for parsing ly files, e.g. 'mutopia
 parser.add_argument("rootdir", help="The root directory that contains the ly files")
 parser.add_argument("-o", "--csv-output", help="Path and file name for the CSV file output")
 parser.add_argument("-p", "--csv-previous", help="Path and file name of the previous CSV file")
-parser.add_argument("-l", "--earliest-ly-version", help="The earliest LilyPond version to include in CSV file (e.g. '2.14.0')")
+parser.add_argument("-l", "--earliest-ly-version", help="The earliest LilyPond version to include in CSV file (e.g. '2.14.0')", default='0.0.0')
 
 
 ''' example of header fields in 'the session' files:
@@ -36,13 +36,12 @@ def get_csv_keys(mode):
                     'footer', 'composer', 'mutopiatitle', 'title', 'mutopiaopus', 'opus', 'mutopiastyle', 'style',
                     'mutopiainstrument', 'instrument', 'mutopiapoet', 'poet', 'mutopialicense', 'license'],
 
-        'thesession': ['id', 'tune-id', 'setting-id', 'parse-order',
+        'thesession': ['id', 'tune-id', 'setting-number', 'setting-id', 'parse-order',
             'omit?', 'omit-reason', 'new?', 'error-status?', 'flagged?',
-            'cn-code', 'ly-version', 'path', 'filename', 'setting-number',
-            'mtime', 'cn-title',
+            'cn-code', 'ly-version', 'path', 'filename', 'mtime', 'cn-title',
             # these are the actual header fields in the session ly files,
             # book and footnotes are rarely used
-            'title', 'subtitle', 'crossRefNumber', 'tagline', 'footnotes', 'book',
+            'title', 'subtitle', 'meter', 'abcTranscription', 'crossRefNumber', 'tagline', 'footnotes', 'book',
             # maybe some files use these, so include them for good measure
             'composer']
     }
@@ -79,6 +78,12 @@ def omit_conflicts(row, conflicts):
         if irr in relevant_conflicts and row['mutopia' + irr] != '':
             relevant_conflicts.discard(irr)
     return relevant_conflicts
+
+def make_multi_digit(input, digit_count):
+    'Convert an integer like 3 or 12 to a string like 0003 or 0012.'
+    in_str = str(input)
+    extra_zeros = digit_count - len(in_str)
+    return '0' * extra_zeros + in_str
 
 def make_row(lyfilenames, dirpath, rootdir, mode, csv_keys):
     # print('\n\n', dirpath[len(rootdir):], '\n', lyfilenames)
@@ -119,11 +124,20 @@ def make_row(lyfilenames, dirpath, rootdir, mode, csv_keys):
         print(dirpath, "   ", rootdir, "   ", row['path'])
 
     elif mode == 'thesession':
-        match = regexes['the_session_id'].search(row['subtitle'])
-        row['tune-id'] = match.group(1)
-        row['setting-id'] = match.group(2)
-        row['id'] = match.group(1) + '-' + match.group(2)
         row['setting-number'] = int(regexes['setting-number'].search(row['filename']).group(1))
+        subtitle_match = regexes['the_session_id'].search(row['subtitle'])
+        if subtitle_match:
+            row['tune-id'] = subtitle_match.group(1)
+            row['setting-id'] = subtitle_match.group(2)
+            row['id'] = make_multi_digit(row['tune-id'], 7) + '-' + make_multi_digit(row['setting-number'], 3)
+        else:
+            # TODO: make this better
+            print("Bad subtitle_match:", "'" + row["title"] + "'", "'" + row["subtitle"] + "'", "'" + row["filename"] + "'")
+            row['id'] = 'ERROR'
+            row['omit?'] = 'T'
+            row['omit-reason'] = 'bad subtitle, could not calculate id'
+        # use title() to capitalize all words in the string, needed for Slip Jig
+        row['meter'] = row['meter'].title()
         # use cn-title for consistency with mutopia csv key
         row['cn-title'] = row['title']
 

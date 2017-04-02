@@ -20,6 +20,7 @@ regexes = {
     'copyright': re.compile('copyright.*?='),
     'tagline': re.compile('tagline.*?='),
     'subtitle': re.compile('subtitle.*?='),
+    'meter': re.compile(r"meter\s*?=\s*\"(.*?)\""),
     'spaces': re.compile('^.*?\S'),
 
     # for detecting errors when running LilyPond
@@ -39,7 +40,8 @@ regexes = {
     'instrument': re.compile('[a-zA-Z\-]+'),
 
     # for 'the session' files
-    'setting-number': re.compile(r'-([0-9]*).ly$')
+    'setting-number': re.compile(r'-([0-9]*).ly$'),
+    'session-filename': re.compile(r'(.*)-[0-9]*.ly')
 }
 
 def regex_search(r, s):
