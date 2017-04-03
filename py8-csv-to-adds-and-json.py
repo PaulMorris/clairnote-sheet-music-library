@@ -13,16 +13,22 @@ parser.add_argument("--htmlfile", help = "Path to the new HTML file (output)")
 
 def report_new_additions_session(csvfile):
     count = 0
+    additions = set()
     with open(csvfile, newline='') as source:
         reader = csv.DictReader(source)
         for row in reader:
 
             if row['omit?'] != 'T' and row['new?'] == 'T':
+                additions.add(row['cn-title'])
                 count += 1
-                print(row['cn-title'])
 
-    print(str(count) + ' new additions.')
-    print('Done with new additions report, beginning JSON generation.\n')
+    # TODO: distinguish new tune additions and new settings of existing tunes
+
+    for a in sorted(additions):
+        print(a)
+
+    print(str(len(additions)) + ' new tunes. ' + str(count) + ' new settings.')
+    print('Done with new additions report.\n')
 
 
 def report_new_additions_mutopia(csvfile):
@@ -58,7 +64,7 @@ def report_new_additions_mutopia(csvfile):
         print(missing_composers)
     else:
         print('No missing composers.')
-    print('Done with new additions report, beginning JSON generation.\n')
+    print('Done with new additions report.\n')
 
 # JSON GENERATION
 
@@ -66,29 +72,44 @@ def make_json_file_session(csvfile, jsfile):
     # dict/object has ids as keys that map to lists/arrays of data for each item
     items_dict = {}
     # a list/array of ids ordered into the default sort order for 'browsing'
-    items_sorted_ids = []
+    titles = []
+    titles_to_ids = {}
 
     with open(csvfile, newline='') as csvf:
         reader = csv.DictReader(csvf)
         for row in reader:
             if row['omit?'] != 'T':
 
-                ID = int(row['id'])
-                items_sorted_ids.append(ID);
+                ID = row['tune-id']
+                print('ID', ID)
+                if ID in items_dict:
+                    items_dict[ID][4].append(int(row['setting-number']))
+                else:
+                    fname = regexes['session-filename'].search(row['filename']).group(1)
+                    titles.append(row['cn-title'])
+                    titles_to_ids[row['cn-title']] = ID
+                    items_dict[ID] = [
+                         row['cn-title'],
+                         row['meter'],
+                         fname,
+                         row['setting-id'],
+                         [int(row['setting-number'])]
+                    ]
 
-                items_dict[ID] = [
-                     row['cn-title'],
-                     row['filename'][:-3],
-                     # TODO:
-                     # row['setting-number']
-                ]
+    titles.sort()
+    sorted_ids = []
+    for title in titles:
+        sorted_ids.append(titles_to_ids[title])
 
-    json_out = json.dumps(items_dict)
+    print('sorted titles', titles)
+    print('sorted ids', sorted_ids)
+    print('titles to ids', titles_to_ids)
+
     print('CSV data parsed.')
 
     with open(jsfile, 'w') as f:
-        f.write('var items_session = ' + json_out)
-        f.write('\nvar items_sorted_ids_session = ' + json.dumps(items_sorted_ids))
+        f.write('var sessionItems = ' + json.dumps(items_dict))
+        f.write('\nvar sessionIdsSorted = ' + json.dumps(sorted_ids))
         print('JS file saved.')
 
 
