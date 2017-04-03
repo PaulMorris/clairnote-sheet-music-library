@@ -225,6 +225,21 @@ def remove_file(f):
     if os.path.isfile(f):
         os.remove(f)
 
+def row_should_be_omitted(args, row):
+    # all of these expressions are reasons to omit the row
+    return (
+        (args.new and row['new?'] != 'T') or
+        (args.old and row['new?'] == 'T') or
+
+        (args.error and row['error-status?'] != 'error') or
+        (args.noerror and row['error-status?'] != '') or
+        (args.minorerror and row['error-status?'] != 'minor') or
+
+        (args.flagged and row['flagged?'] != 'T') or
+
+        (args.omitted and row['omit?'] != 'T') or
+        (args.notomitted and row['omit?'] == 'T')
+    )
 
 # unused functions
 """

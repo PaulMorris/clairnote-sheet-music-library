@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from subprocess import run, PIPE, STDOUT
 import csv, os, re, argparse, subprocess
-from py_ly_parsing import regexes, create_directories, remove_file
+from py_ly_parsing import regexes, create_directories, remove_file, row_should_be_omitted
 
 parser = argparse.ArgumentParser()
 
@@ -124,23 +124,6 @@ def rename_pdf(file_path_no_extension, suffix, logfile):
             log.write(stringout)
         print(stringout)
 
-
-def row_should_be_omitted(args, row):
-    # all of these expressions are reasons to omit the row
-    return (
-        (args.new and row['new?'] != 'T') or
-        (args.old and row['new?'] == 'T') or
-
-        (args.error and row['error-status?'] != 'error') or
-        (args.noerror and row['error-status?'] != '') or
-        (args.minorerror and row['error-status?'] != 'minor') or
-
-        (args.flagged and row['flagged?'] != 'T') or
-
-        (args.omitted and row['omit?'] != 'T') or
-        (args.notomitted and row['omit?'] == 'T')
-    )
-
 def triage_rows(args):
     rows = []
     with open(args.oldcsv, newline='') as csvfile:
@@ -238,7 +221,7 @@ def update_csv(problem_file_ids, oldcsv, newcsv, logfile):
                     # row['omit?'] = 'T'
                     # row['omit-reason'] = 'ly error or warn'
             writer.writerow(row)
-        print('Done with CSV file.')
+        print('Done with CSV.\nOld:', oldcsv, '\nNew:', newcsv)
 
 def main(args):
     rows = triage_rows(args)

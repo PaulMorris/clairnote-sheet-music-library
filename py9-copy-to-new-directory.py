@@ -1,17 +1,15 @@
 #!/usr/bin/env python3
 import os, csv, shutil, argparse
-
-# other possibilities for sourceCSV
-# sourceCSV = 'out/full-final.csv'
-# sourceCSV = 'out/new-omitted.csv'
-
-sourceCSV = 'out/errors-marked.csv'
-rootDir = '../../The-Mutopia-Project/ftp/'
-targetDir = '../../mutopia-clairnote-out-1-16-2017/'
+from py_ly_parsing import row_should_be_omitted
 
 # ARGUMENT PARSING
 
 parser = argparse.ArgumentParser()
+
+parser.add_argument("mode", help = "The type of files we're working with, e.g. 'mutopia' or 'thesession'")
+parser.add_argument("csvfile", help = "Path to the CSV file (input)")
+parser.add_argument("outdir", help = "The output directory to copy the files to")
+parser.add_argument("rootdir", help = "The root directory that contains the files")
 
 # default (-d) is to not render omitted items
 parser.add_argument("-d", "--notomitted", help="copy only items that are not omitted", action="store_true")
@@ -26,45 +24,56 @@ parser.add_argument("--noerror", help="copy only items that have no errors", act
 
 parser.add_argument("--flagged", help="copy only items that have been flagged", action="store_true")
 
-args = parser.parse_args()
+parser.add_argument("--dryrun", help="Don't actually copy files, just indicate how many rows would have been copied", action="store_true")
 
-def includeRow(row):
-    if (
-    # these expressions are all reasons to not include the row/item
-    (args.new == True and row['new?'] != 'T') or
-    (args.old == True and row['new?'] == 'T') or
+def copy_mutopia(rootdir, outdir, row):
+    rootdir_path = os.path.join(rootdir, row['path'])
+    outdir_path = os.path.join(outdir, row['path'])
+    # print(rootdir_path)
+    shutil.copytree(rootdir_path, outdir_path)
+    return rootdir_path
 
-    (args.error == True and row['error-status?'] != 'error') or
-    (args.noerror == True and row['error-status?'] != '') or
-    (args.minorerror == True and row['error-status?'] != 'minor') or
+def copy_session(rootdir, outdir, row):
+    # get filename without extension
+    fname = row['filename'][:-3]
+    extensions = ['.ly', '-let.pdf', '-a4.pdf', '.mid']
+    for ext in extensions:
+        file_ext = fname + ext
+        rootdir_path = os.path.join(rootdir, row['path'], file_ext)
+        outdir_path = os.path.join(outdir, row['path'], file_ext)
+        shutil.copy2(rootdir_path, outdir_path)
+    return fname
 
-    (args.flagged == True and row['flagged?'] != 'T') or
+def main(args):
+    rows_to_copy = []
 
-    (args.omitted == True and row['omit?'] != 'T') or
-    (args.notomitted == True and row['omit?'] == 'T')
-    ):
-        return False
-    else:
-        return True
+    with open(args.csvfile, newline='') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
 
+            if not row_should_be_omitted(args, row):
+                rows_to_copy.append(row)
 
-triagedRows = []
+        if (args.dryrun):
+            print('Dry run: stopping, would otherwise copy', len(rows_to_copy), 'items.')
+        else:
+            count = 0
+            for row in rows_to_copy:
+                count += 1
+                try:
+                    if (args.mode == 'mutopia'):
+                        to_print_out = copy_mutopia(args.rootdir, args.outdir, row)
+                    elif (args.mode == 'thesession'):
+                        to_print_out = copy_session(args.rootdir, args.outdir, row)
+                    else:
+                        raise ValueError("Oops! We need a valid mode argument, either 'mutopia' or 'thesession'.")
 
-with open(sourceCSV, newline='') as sourceCSVFile:
-    reader = csv.DictReader(sourceCSVFile)
+                    print(str(count) + ' ' + to_print_out)
 
-    for row in reader:
-        if includeRow(row):
-            triagedRows.append(row)
+                except ValueError as err:
+                    print(err.args)
 
-    if 'y' == input('About to copy ' + str(len(triagedRows)) + ' pieces. Type y to continue.'):
-        count = 0
-        for row in triagedRows:
-            count += 1
-            pathToSourceDir = os.path.join(rootDir, row['path'])
-            pathToTargetDir = os.path.join(targetDir, row['path'])
-            # print(pathToSourceDir)
-            print(str(count) + ' ' + pathToTargetDir)
-            shutil.copytree(pathToSourceDir, pathToTargetDir)
+            print('Done.', count, 'pieces copied.')
 
-print('Done.', count, 'pieces copied.')
+if __name__ == "__main__":
+    main(parser.parse_args())
