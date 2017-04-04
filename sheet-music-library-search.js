@@ -14,10 +14,12 @@ if (!document.getElementsByClassName) {
   var styleBoxes = {},
       instrumentBoxes = {},
       composerBoxes = {},
-      lunrIndex,
-      timeout,
-      input = document.getElementById("search-box"),
-      searchResults = document.getElementById('search-results');
+      collection,
+      lunrIndexMutopia,
+      lunrIndexSession,
+      searchBox = document.getElementById("search-box"),
+      searchResults = document.getElementById('search-results'),
+      mutopiaFilterButtons = document.getElementById('mutopia-filter-buttons');
 
   var oneBoxAnchorClickHandler = function () {
       var id = this.parentNode.firstChild.id,
@@ -67,7 +69,7 @@ if (!document.getElementsByClassName) {
       displayActiveFilters(Object.keys(styleBoxes), 'styles-active-filters');
       displayActiveFilters(Object.keys(instrumentBoxes), 'instruments-active-filters');
 
-      var composers = Object.keys(composerBoxes).map(function (c) { return composerLookup[c][0] });
+      var composers = Object.keys(composerBoxes).map(function (c) { return mutopiaComposerLookup[c][0] });
       displayActiveFilters(composers, 'composers-active-filters');
   };
 
@@ -116,13 +118,59 @@ if (!document.getElementsByClassName) {
       return document.createTextNode(' | ');
   };
 
+  var makeResultLiSession = function (id, item) {
+      var li = document.createElement('li'),
+          strong = document.createElement('strong'),
+          divider = ' | ',
+          // item[2] is the file name without the extension
+          path = "http://clairnote.org/sheet-music-files-the-session/" + item[2];
+
+      // FIRST LINE
+      // item[0] is title
+      // item[1] is rhythm/meter (e.g. jig, reel, etc.)
+      strong.textContent = item[0] + ' — ' + item[1];
+
+      li.className = 'search-result';
+      li.appendChild(strong);
+
+      // ADDITIONAL LINES with FILES AND LINKS
+      // item[4] is an array of setting numbers
+      item[4].forEach(function(setnum) {
+          li.appendChild(document.createElement('br'));
+
+          var settingPath = path + '-' + setnum;
+          var line = document.createElement('span');
+          line.className = 'line-two';
+          line.textContent = "Setting " + setnum + divider;
+
+          var anchors = [
+              makeAnchor("LETTER PDF", settingPath + '-let.pdf', 'Letter Size PDF File', '_blank'),
+              makeAnchor("A4 PDF", settingPath + '-a4.pdf', 'A4 Size PDF File', '_blank'),
+              makeAnchor("MIDI", settingPath + '.mid', 'MIDI File', '_blank'),
+              makeAnchor("LY", settingPath + '.ly', 'LilyPond File', '_blank')
+          ];
+          anchors.forEach(function(a) {
+              line.appendChild(a);
+              line.appendChild(makeDivider());
+          });
+
+          // example: https://thesession.org/tunes/11203#setting30153
+          // item[3] is setting-id number
+          var sourcePath = "https://thesession.org/tunes/" + id + '#setting' + item[3];
+          line.appendChild(makeAnchor("SOURCE", sourcePath, 'The Session Page', '_blank'));
+
+          li.appendChild(line);
+      });
+      return li;
+  };
+
   var makeResultLi = function (id, item) {
       var li = document.createElement('li'),
           strong = document.createElement('strong'),
           line2 = document.createElement('span'),
           divider = ' | ',
           pathToDir = "http://clairnote.org/sheet-music-files/" + item[4] + "/",
-          composer = composerLookup[item[1]][0];
+          composer = mutopiaComposerLookup[item[1]][0];
 
       // FIRST LINE
       // item[2] is title
@@ -164,7 +212,7 @@ if (!document.getElementsByClassName) {
               'This work involves multiple PDF, MIDI, and/or LilyPond Files', '_blank'));
       }
       line2.appendChild(makeDivider());
-      line2.appendChild(makeAnchor("MP", "http://www.mutopiaproject.org/cgibin/piece-info.cgi?id=" + id,
+      line2.appendChild(makeAnchor("SOURCE", "http://www.mutopiaproject.org/cgibin/piece-info.cgi?id=" + id,
           'Mutopia Project Page', '_blank'));
 
       line2.appendChild(makeDivider());
@@ -180,11 +228,12 @@ if (!document.getElementsByClassName) {
 
   var displaySearchResults = function (results, store) {
       searchResults.innerHTML = '';
+      var makeLi = collection === 'thesession' ? makeResultLiSession : makeResultLi;
       // If there are any results, iterate over them.
       if (results.length) {
           results.forEach(function (id) {
-              searchResults.appendChild(makeResultLi(id, store[id]));
-          });
+              searchResults.appendChild(makeLi(id, store[id]));
+          })
       } else {
           var li = document.createElement('li');
           li.class = 'search-result';
@@ -192,8 +241,9 @@ if (!document.getElementsByClassName) {
           searchResults.appendChild(li);
       }
       // update 'showing n of x'
+      var total = collection === 'thesession' ? sessionIdsSorted.length : mutopiaIdsSorted.length;
       document.getElementById('showing')
-          .textContent = '| ' + results.length + ' results out of ' + recsSortedIds.length;
+          .textContent = '| ' + results.length + ' results out of ' + total;
   }
 
   var applyFilters = function (ids, store, filters, index) {
@@ -219,22 +269,49 @@ if (!document.getElementsByClassName) {
   };
 
   var searchAndFilter = function () {
-      var query = input.value.trimLeft(),
+      var query = searchBox.value.trimLeft(),
           ids, ids2, ids3, ids4,
-          lunrResults;
+          lunrResults, searchIndex, sortedIds;
+
+      if (collection === 'thesession') {
+          searchIndex = lunrIndexSession;
+          sortedIds = sessionIdsSorted;
+      } else {
+          searchIndex = lunrIndexMutopia;
+          sortedIds = mutopiaIdsSorted;
+      }
+
+      // search the index
       if (query) {
-          lunrResults = lunrIndex.search(query);
+          lunrResults = searchIndex.search(query);
           ids = lunrResults.map(function (item) { return item.ref; });
       } else {
           // .slice() not needed since ids is not mutated
-          ids = recsSortedIds;
+          ids = sortedIds;
       }
+
       // apply filters to results
-      ids2 = Object.keys(styleBoxes).length ? applyFilters(ids, recsjson, styleBoxes, 0) : ids;
-      ids3 = Object.keys(composerBoxes).length ? applyFilters(ids2, recsjson, composerBoxes, 1) : ids2;
-      ids4 = Object.keys(instrumentBoxes).length ? applyInstrumentFilters(ids3, recsjson, instrumentBoxes, 3) : ids3;
-      displaySearchResults(ids4, recsjson);
+      if (collection === 'thesession') {
+          displaySearchResults(ids, sessionItems);
+      } else {
+          ids2 = Object.keys(styleBoxes).length ? applyFilters(ids, mutopiaItems, styleBoxes, 0) : ids;
+          ids3 = Object.keys(composerBoxes).length ? applyFilters(ids2, mutopiaItems, composerBoxes, 1) : ids2;
+          ids4 = Object.keys(instrumentBoxes).length ? applyInstrumentFilters(ids3, mutopiaItems, instrumentBoxes, 3) : ids3;
+          displaySearchResults(ids4, mutopiaItems);
+      }
   };
+
+
+    var switchSourceCollection = function (event) {
+        doNotPropagate(event);
+        // a little async prevents jank in menu
+        setTimeout(function() {
+            collection = event.target.value;
+            searchAndFilter();
+            mutopiaFilterButtons.style.display = collection === 'mutopia' ? 'inline' : 'none';
+        }, 1);
+        return false;
+    }
 
   var doNotPropagate = function (event) {
       if (event.stopPropagation) {
@@ -252,7 +329,7 @@ if (!document.getElementsByClassName) {
           boxAnchors = document.getElementsByClassName('f-link');
 
       // Initalize lunr with the fields it will be searching on.
-      lunrIndex = lunr(function () {
+      lunrIndexMutopia = lunr(function () {
           this.ref('id');
           this.field('title', { boost: 10 });
           this.field('style');
@@ -265,12 +342,13 @@ if (!document.getElementsByClassName) {
       });
 
       // Add the data to lunr index
-      recsSortedIds.forEach(function (id) {
-          var item = recsjson[id];
-          lunrIndex.add({
+      mutopiaIdsSorted.forEach(function (id) {
+          var item = mutopiaItems[id];
+          lunrIndexMutopia.add({
+              // id is required
               'id': id,
               'style': item[0],
-              'composer': composerLookup[item[1]][0],
+              'composer': mutopiaComposerLookup[item[1]][0],
               'title': item[2],
               'instruments': item[3].join(' '),
               'opus': item[7],
@@ -278,6 +356,21 @@ if (!document.getElementsByClassName) {
               'date': item[9],
               'arranger': item[10]
           });
+      });
+
+      lunrIndexSession = lunr(function () {
+          this.field('title', { boost: 10 });
+          this.field('meter');
+      });
+
+      sessionIdsSorted.forEach(function (id) {
+          var item = sessionItems[id];
+          lunrIndexSession.add({
+              // id is required
+              'id': id,
+              'title': item[0],
+              'meter': item[1]
+          })
       });
 
       // add checkbox listeners for anchor tags
@@ -288,12 +381,14 @@ if (!document.getElementsByClassName) {
       // add event listeners
       document.getElementById("search-button").addEventListener("click", searchAndFilter, false);
       document.getElementById("search-box").addEventListener("keyup", function(event) {
-          event.preventDefault();
+          doNotPropagate(event);
           if (event.which == 13) {
               searchAndFilter();
               return false;
           }
       });
+
+      document.getElementById("source-selector").addEventListener("input", function(event) { switchSourceCollection(event);}, false);
 
       document.getElementById("styles-filter-button").addEventListener("click", function() {showFiltersButton('style-filters');}, false);
       document.getElementById("instruments-filter-button").addEventListener("click", function () {showFiltersButton('instrument-filters');}, false);
