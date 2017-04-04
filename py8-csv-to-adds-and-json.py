@@ -68,7 +68,7 @@ def report_new_additions_mutopia(csvfile):
 
 # JSON GENERATION
 
-def make_json_file_session(csvfile, jsfile):
+def make_json_session(csvfile, jsfile):
     # dict/object has ids as keys that map to lists/arrays of data for each item
     items_dict = {}
     # a list/array of ids ordered into the default sort order for 'browsing'
@@ -144,7 +144,7 @@ def inst_classifier(mutopiainstrument, id):
     return insts, no_instrument_match, unrecognized_inst_tokens
 
 
-def make_json_file(csvfile, jsfile):
+def make_json_mutopia(csvfile, jsfile):
     instrument_tally = {}
     style_tally = {}
     composer_tally = {}
@@ -210,8 +210,8 @@ def make_json_file(csvfile, jsfile):
     print('Unrecognized Instruments:', sorted(unrecognized_inst_tokens))
 
     with open(jsfile, 'w') as f:
-        f.write('var recsjson = ' + json_out)
-        f.write('\nvar items_sorted_ids = ' + json.dumps(items_sorted_ids))
+        f.write('var mutopiaItems = ' + json_out)
+        f.write('\nvar mutopiaIdsSorted = ' + json.dumps(items_sorted_ids))
         print('JSON saved.')
 
         # composer lookup table also goes in json data file
@@ -315,14 +315,14 @@ def html_main(style_tally, style_list, instrument_tally, instrument_list, compos
 def main(args):
     try:
         if args.mode == 'mutopia':
-            style_tally, instrument_tally, composer_tally = make_json_file(args.csvfile, args.jsfile)
+            style_tally, instrument_tally, composer_tally = make_json_mutopia(args.csvfile, args.jsfile)
             html = html_main(style_tally, style_list, instrument_tally, instrument_list, composer_tally, composer_list)
             with open(args.htmlfile, 'w') as h:
                 h.write(html)
             report_new_additions_mutopia(args.csvfile)
 
         elif args.mode == 'thesession':
-            make_json_file_session(args.csvfile, args.jsfile)
+            make_json_session(args.csvfile, args.jsfile)
             report_new_additions_session(args.csvfile)
 
         else:
