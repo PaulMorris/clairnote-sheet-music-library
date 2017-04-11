@@ -13,9 +13,9 @@ class py1Test(unittest.TestCase):
 
     def test_runscript(self):
         _, path_temp = tempfile.mkstemp()
-        subprocess.run(["python3", "py1-csv-from-repo.py", "tests/data/test-repo", "-o", path_temp])
+        subprocess.run(["python3", "py1-csv-from-repo.py", "mutopia", "tests/data/test-mutopia-trad-repo", "-o", path_temp])
 
-        expected = readCSV(os.path.join(DATA_DIR, "expected-csv-for-test-repo", "py1-output.csv"))
+        expected = readCSV(os.path.join(DATA_DIR, "expected-csv-for-test-mutopia-trad-repo", "py1-output.csv"))
         result = readCSV(path_temp)
 
         for d in expected:
