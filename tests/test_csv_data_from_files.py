@@ -1,4 +1,5 @@
 import unittest, subprocess, tempfile, os, csv
+import csv_data_from_files as csv_script
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 
@@ -13,7 +14,7 @@ class py1Test(unittest.TestCase):
 
     def test_runscript(self):
         _, path_temp = tempfile.mkstemp()
-        subprocess.run(["python3", "py1-csv-from-repo.py", "mutopia", "tests/data/test-mutopia-trad-repo", "-o", path_temp])
+        subprocess.run(["python3", "csv_data_from_files.py", "mutopia", "tests/data/test-mutopia-trad-repo", "-o", path_temp])
 
         expected = readCSV(os.path.join(DATA_DIR, "expected-csv-for-test-mutopia-trad-repo", "py1-output.csv"))
         result = readCSV(path_temp)
@@ -24,3 +25,14 @@ class py1Test(unittest.TestCase):
             d['mtime'] = None
 
         self.assertEqual(expected, result)
+
+    def test_version_check(self):
+        comparison_function = csv_script.version_check('2.18.2')
+        cases = [
+            ('2.19.2', True),
+            ('2.6.2', False),
+            ('2.18.2', True)
+        ]
+        for case_in,case_out in cases:
+            result = comparison_function({ 'version': case_in })
+            self.assertEqual(result, case_out)
