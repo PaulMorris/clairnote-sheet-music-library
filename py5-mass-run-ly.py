@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from subprocess import run, PIPE, STDOUT
 import csv, os, re, argparse, subprocess
-from py_ly_parsing import regexes, create_directories, remove_file, row_should_be_omitted
+from ly_parsing import regexes, create_directories, remove_file, row_should_be_omitted
 from console_utils import run_command, log_lines, print_lines
 
 parser = argparse.ArgumentParser()

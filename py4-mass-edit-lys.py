@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import csv, os, re, argparse, shutil
-from py_ly_parsing import get_ly_filenames, regexes
+from ly_parsing import get_ly_filenames, regexes
 
 # COMMAND LINE ARGUMENTS
 parser = argparse.ArgumentParser()

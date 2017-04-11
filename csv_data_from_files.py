@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import os, csv, argparse
-from py_ly_parsing import (regexes, regex_search, vsn_greater_than_or_equals,
+from ly_parsing import (regexes, regex_search, vsn_greater_than_or_equals,
     get_all_lilypond_filenames, get_ly_filenames, get_version, get_included_files,
     get_header_data, check_for_clairnote_code, get_most_recent_mtime)
 from py_csv_merging import merge_csv_data

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import os, argparse
-from py_ly_parsing import (get_all_lilypond_filenames, get_version,
+from ly_parsing import (get_all_lilypond_filenames, get_version,
     header_data_from_string, vsn_greater_than_or_equals)
 
 # COMMAND LINE ARGUMENTS

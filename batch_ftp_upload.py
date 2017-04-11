@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import os, csv, shutil, argparse
-from py_ly_parsing import row_should_be_omitted
+from ly_parsing import row_should_be_omitted
 from ftplib import FTP
 from retrying import retry
 

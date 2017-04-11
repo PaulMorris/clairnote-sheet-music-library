@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import csv, json, re, argparse
 from py_composers_etc import composer_list, instrument_list, style_list, two_word_insts
-from py_ly_parsing import regexes
+from ly_parsing import regexes
 
 parser = argparse.ArgumentParser()
 parser.add_argument("mode", help = "The mode for input and output e.g. 'mutopia' or 'thesession'")

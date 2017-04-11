@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import subprocess, csv, os, argparse
-from py_ly_parsing import vsn_int, get_all_lilypond_filenames
+from ly_parsing import vsn_int, get_all_lilypond_filenames
 from console_utils import run_command, log_lines, print_lines
 
 parser = argparse.ArgumentParser()
