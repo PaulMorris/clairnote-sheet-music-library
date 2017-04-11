@@ -1,53 +1,75 @@
 #!/usr/bin/env python3
-import subprocess, csv, os
-from py_ly_parsing import vsn_int
+import subprocess, csv, os, argparse
+from py_ly_parsing import vsn_int, get_all_lilypond_filenames
+from console_utils import run_command, log_lines, print_lines
 
-sourceCSV = 'out/to-run-convert-ly-on.csv'
-rootDir = '../../The-Mutopia-Project/ftp/'
-newvsn = '2.19.49'
-# we convert-ly any files not omitted and BETWEEN these two versions:
-lower = vsn_int('2.18.2')
-higher = vsn_int('2.19.49')
+parser = argparse.ArgumentParser()
+# convert-ly any files BETWEEN the low and high versions
+parser.add_argument("--lowvsn", help="The lowest version to convert", default='0.0.0')
+parser.add_argument("--highvsn", help="The highest version to convert", default='100.0.0')
 
-with open(sourceCSV, newline='') as csvfile:
-    reader = csv.DictReader(csvfile)
-    for row in reader:
-        vsn = vsn_int(row['ly-version'])
+parser.add_argument("mode", help="The mode for parsing ly files, e.g. 'mutopia' or 'thesession'")
+parser.add_argument("logfile", help = "Log console output to this file")
+parser.add_argument("errorfile", help="Log errors to this file")
+parser.add_argument("csvpath", help = "Path to the CSV file input")
+parser.add_argument("indir", help="Read files from this directory")
 
-        if vsn > lower and vsn < higher and row['omit?'] != 'T':
-            pathToDir = os.path.join(rootDir, row['path'])
-            # pathToLy = pathToDir + row['filename']
-            # stripFileName = row['filename'].split('.')
-            # print(stripFileName[0])
-            # print(row['id'])
+# TODO: maybe add option to write converted files to a new directory
+# parser.add_argument("outdir", help = "Write the converted files to this directory")
 
-            # get list of all .ly and .ily files in directory and subdirectories
-            lyFileList = []
-            for dirpath, subdirnames, filenames in os.walk(pathToDir):
-                # print('D: %s' % dirpath[len(rootDir):])
-                # print('SDL:', subdirnames)
-                # print('FL:', filenames)
+def get_ly_paths(indir_path):
+    # get list of all .ly and .ily files in directory and subdirectories
+    lypaths = []
+    for dirpath, subdirnames, filenames in os.walk(indir_path):
+        for f in get_all_lilypond_filenames(filenames):
+            lypaths.append(os.path.join(dirpath, f))
+    return lypaths
 
-                for f in filenames:
-                    if f[-3:] == '.ly' or f[-4:] == '.ily' or f[-4:] == '.lyi':
-                        lyFileList.append(os.path.join(dirpath, f))
+def get_command(fromvsn, tovsn, filepath):
+    return [
+        'convert-ly',
+        '-e',
+        '--from=' + fromvsn,
+        '--to=' + tovsn,
+        filepath
+    ]
 
-                # if len(subdirnames) > 1:
-                #     print("SUBDIR")
-                # print(lyFileList)
+def main(args):
+    error_summary = ['', 'ERROR SUMMARY', '']
+    lowint = vsn_int(args.lowvsn)
+    highint = vsn_int(args.highvsn)
+    muto = args.mode == 'mutopia'
+    with open(args.csvpath, newline='') as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            vsn = vsn_int(row['ly-version'])
 
-            # print(row['ly-version'])
-            # if row['id'] == '334':
-            # if len(lyFileList) > 1:
+            if vsn > lowint and vsn < highint and row['omit?'] != 'T':
 
-            print('____________________________')
-            print(row['id'])
-            print(row['parse-order'], ': ', row['mutopiacomposer'], row['cn-title'])
-            print('')
+                if muto:
+                    lypaths = get_ly_paths(os.path.join(args.indir, row['path']))
+                else:
+                    lypaths = [os.path.join(args.indir, row['path'], row['filename'])]
 
-            for filepath in lyFileList:
-                output = subprocess.call(['convert-ly',
-                                          '-e',
-                                          '--from=' + row['ly-version'],
-                                          '--to=' + newvsn, filepath])
-                print(output)
+                print('____________________________')
+                print(row['id'])
+                mutocomp = row['mutopiacomposer'] if muto else ''
+                print(row['parse-order'], ': ', mutocomp, row['cn-title'])
+
+                for filepath in lypaths:
+                    command = get_command(row['ly-version'], args.highvsn, filepath)
+                    returncode, console_out = run_command(command)
+
+                    console_out_returncode = console_out + [str(returncode)]
+                    log_lines(console_out_returncode, args.logfile)
+                    print_lines(console_out_returncode)
+
+                    if returncode == 1:
+                        error_summary.append(filepath)
+                        log_lines(console_out, args.errorfile)
+
+    log_lines(error_summary, args.errorfile)
+
+
+if __name__ == "__main__":
+    main(parser.parse_args())
