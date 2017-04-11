@@ -2,6 +2,7 @@
 from subprocess import run, PIPE, STDOUT
 import csv, os, re, argparse, subprocess
 from py_ly_parsing import regexes, create_directories, remove_file, row_should_be_omitted
+from console_utils import run_command, log_lines, print_lines
 
 parser = argparse.ArgumentParser()
 
@@ -96,22 +97,6 @@ def get_command_midi_only(file_path_no_extension, file_path_ly, executable):
         file_path_ly
     ]
 
-def run_command(command):
-    ''' Use subprocess to run a command and return the console output.
-        LilyPond's console output is via stderr not stdout. '''
-    proc = run(command, stdout=PIPE, stderr=PIPE, universal_newlines=True)
-    console_out = proc.stderr.split('\n')
-    return console_out
-
-def log_lines(lines, logfile):
-    ''' Write lines (a list of strings, e.g. console output) to logfile and
-        print to console. '''
-    with open(logfile, 'a') as log:
-        for line in lines:
-            log.write(line)
-            log.write('\n')
-            print(line)
-
 def rename_pdf(file_path_no_extension, suffix, logfile):
     ''' Rename pdf files with -a4 and -let suffix. '''
     try:
@@ -144,8 +129,10 @@ def get_row_log_header(row, lyfile):
     ]
 
 def run_lilypond_and_log(command, logfile, row, lyfile, errorfile):
-    console_out = run_command(command)
+    returncode, console_out = run_command(command)
     log_lines(console_out, logfile)
+    print_lines(console_out)
+    # TODO: take advantage of returncode, and also write full error logs to error file
     problem_ids = error_check(console_out, row['id'], os.path.join(row['path'], lyfile), errorfile)
     return problem_ids
 
@@ -164,7 +151,9 @@ def handle_rows(rows, args):
             file_path_no_extension = os.path.join(args.rootdir, row['path'], file_no_extension)
 
             # log 'header' details for this piece in console and args.logfile
-            log_lines(get_row_log_header(row, lyfile), args.logfile)
+            header_out = get_row_log_header(row, lyfile)
+            log_lines(header_out, args.logfile)
+            print_lines(header_out)
 
             # MIDI ONLY
             if args.midionly:
@@ -201,7 +190,9 @@ def write_error_file(errorfile, problem_file_ids):
 
 def update_csv(problem_file_ids, oldcsv, newcsv, logfile):
     ''' Indicate error files in csv. '''
-    log_lines(['Omitting problem files in CSV file...', 'IDs of problem files:'], logfile)
+    message = ['Omitting problem files in CSV file...', 'IDs of problem files:']
+    log_lines(message, logfile)
+    print_lines(message)
 
     create_directories(newcsv)
 
@@ -215,11 +206,11 @@ def update_csv(problem_file_ids, oldcsv, newcsv, logfile):
             if len(ID) > 0:
                 if ID in problem_file_ids:
                     log_lines([ID], logfile)
+                    print_lines([ID])
                     row['error-status?'] = 'error'
                     # problem_file_ids.discard(ID)
-                    # DON'T OMIT AUTOMATICALLY
-                    # row['omit?'] = 'T'
-                    # row['omit-reason'] = 'ly error or warn'
+                    row['omit?'] = 'T'
+                    row['omit-reason'] = 'ly error or warn'
             writer.writerow(row)
         print('Done with CSV.\nOld:', oldcsv, '\nNew:', newcsv)
 
