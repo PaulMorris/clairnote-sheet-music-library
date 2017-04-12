@@ -8,11 +8,11 @@ def readCSV(file_path):
     with open(file_path) as f:
         return list(csv.DictReader(f))
 
-class py1Test(unittest.TestCase):
+class csv_data_from_files_test(unittest.TestCase):
 
     maxDiff = None
 
-    def test_runscript(self):
+    def test_run_script_mutopia(self):
         _, path_temp = tempfile.mkstemp()
         subprocess.run(["python3", "csv_data_from_files.py", "mutopia", "tests/data/test-mutopia-trad-repo", "-o", path_temp])
 
@@ -33,6 +33,6 @@ class py1Test(unittest.TestCase):
             ('2.6.2', False),
             ('2.18.2', True)
         ]
-        for case_in,case_out in cases:
+        for case_in, case_out in cases:
             result = comparison_function({ 'version': case_in })
             self.assertEqual(result, case_out)
