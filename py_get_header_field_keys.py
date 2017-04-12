@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import os, argparse
 from ly_parsing import (get_all_lilypond_filenames, get_version,
-    header_data_from_string, vsn_greater_than_or_equals)
+    header_data_from_string, vsn_compare, greater_or_equal)
 
 # COMMAND LINE ARGUMENTS
 parser = argparse.ArgumentParser()
@@ -29,7 +29,7 @@ def get_all_header_fields(rootdir, earliest_ly_version):
 
                     # if there earliest_ly_version is supplied then we use it
                     if earliest_ly_version:
-                        if version != None and vsn_greater_than_or_equals(earliest_ly_version, version):
+                        if version != None and vsn_compare(version, greater_or_equal, earliest_ly_version):
                             header_fields.update(header_keys_from_file(dirpath, name))
                     else:
                         header_fields.update(header_keys_from_file(dirpath, name))

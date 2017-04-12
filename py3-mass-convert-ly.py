@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import subprocess, csv, os, argparse
-from ly_parsing import vsn_int, get_all_lilypond_filenames
+from ly_parsing import vsn_compare, less_than, greater_than, get_all_lilypond_filenames
 from console_utils import run_command, log_lines, print_lines
 
 parser = argparse.ArgumentParser()
@@ -36,15 +36,15 @@ def get_command(fromvsn, tovsn, filepath):
 
 def main(args):
     error_summary = ['', 'ERROR SUMMARY', '']
-    lowint = vsn_int(args.lowvsn)
-    highint = vsn_int(args.highvsn)
     muto = args.mode == 'mutopia'
     with open(args.csvpath, newline='') as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
-            vsn = vsn_int(row['ly-version'])
+            vsn = row['ly-version']
 
-            if vsn > lowint and vsn < highint and row['omit?'] != 'T':
+            if (vsn_compare(vsn, greater_than, args.lowvsn) and
+                vsn_compare(vsn, less_than, args.highvsn) and
+                row['omit?'] != 'T'):
 
                 if muto:
                     lypaths = get_ly_paths(os.path.join(args.indir, row['path']))

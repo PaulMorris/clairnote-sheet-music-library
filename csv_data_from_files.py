@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import os, csv, argparse
-from ly_parsing import (regexes, regex_search, vsn_greater_than_or_equals,
+from ly_parsing import (regexes, regex_search, vsn_compare, greater_or_equal,
     get_all_lilypond_filenames, get_ly_filenames, get_version, get_included_files,
     get_header_data, check_for_clairnote_code, get_most_recent_mtime)
 from py_csv_merging import merge_csv_data
@@ -187,7 +187,7 @@ def get_mutopia_ly_file_paths(rootdir):
 def version_check(earliest_ly_version):
     def vcheck(piece):
         vsn = piece['version']
-        return vsn != None and vsn_greater_than_or_equals(earliest_ly_version, vsn)
+        return vsn != None and vsn_compare(vsn, greater_or_equal, earliest_ly_version)
     return vcheck
 
 def handle_pieces(pieces, rootdir, mode, csv_keys, csv_previous):

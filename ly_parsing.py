@@ -1,4 +1,5 @@
 import re, os
+from itertools import zip_longest
 
 # bulk lilypond collection functions
 
@@ -79,13 +80,35 @@ def balanced_brackets(arg):
                 return result
     return "NOPE"
 
-def vsn_int(vsn):
-    vsn_list = vsn.split('.')
-    vsn_num = int(vsn_list[0]) * 1000000 + int(vsn_list[1]) * 1000 + int(vsn_list[2])
-    return vsn_num
 
-def vsn_greater_than_or_equals(ref, vsn):
-    return vsn_int(vsn) >= vsn_int(ref)
+def vsn_tuple(vsn):
+    return tuple(map(int, vsn.split('.')))
+
+def get_version_relation(va, vb):
+    ''' va and vb are strings like '2.18.2' and should be the same length.
+        If one is shorter, 0 is filled in for the missing digits, using zip_longest.
+        Returns 1 for va > vb
+               -1 for va < vb
+                0 for va == vb '''
+    for vai, vbi in zip_longest(vsn_tuple(va), vsn_tuple(vb), fillvalue=0):
+        if vai == vbi:
+            continue
+        elif vai < vbi:
+            return -1
+        elif vai > vbi:
+            return 1
+    return 0
+
+greater_than = lambda a, b: a > b
+less_than = lambda a, b: a < b
+greater_or_equal = lambda a, b: a >= b
+
+def vsn_compare(va, comparator, vb):
+    ''' va and vb are strings like '2.18.2' and should be the same length.
+        Relation is 1, -1, or 0 indicating relation of va to vb. '''
+    relation = get_version_relation(va, vb)
+    return comparator(relation, 0)
+
 
 def get_all_lilypond_filenames(filenames):
     lynames = []
