@@ -3,7 +3,7 @@ import os, csv, argparse
 from ly_parsing import (regexes, regex_search, vsn_compare, greater_or_equal,
     get_all_lilypond_filenames, get_ly_filenames, get_version, get_included_files,
     get_header_data, check_for_clairnote_code, get_most_recent_mtime)
-from py_csv_merging import merge_csv_data
+from csv_merging import merge_csv_data
 
 # walks through a directory and subdirectories creating a csv file with data from the ly files
 

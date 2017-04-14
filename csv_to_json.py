@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import csv, json, re, argparse
-from py_composers_etc import composer_list, instrument_list, style_list, two_word_insts
+from composers_etc import composer_list, instrument_list, style_list, two_word_insts
 from ly_parsing import regexes
 
 parser = argparse.ArgumentParser()
