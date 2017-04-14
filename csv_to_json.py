@@ -84,6 +84,7 @@ def make_json_session(csvfile, jsfile):
                 print('ID', ID)
                 if ID in items_dict:
                     items_dict[ID][4].append(int(row['setting-number']))
+                    items_dict[ID][4].sort()
                 else:
                     fname = regexes['session-filename'].search(row['filename']).group(1)
                     titles.append(row['cn-title'])
