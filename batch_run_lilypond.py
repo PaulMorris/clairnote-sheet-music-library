@@ -49,7 +49,7 @@ parser.add_argument("--stable-version", help="Should be only the first four char
 # continuing, cross fingers
 
 def error_check(console_out, ID, path, errorfile):
-    problem_file_ids = set()
+    problem_file_ids = dict()
     with open(errorfile, "a") as err:
         for line in console_out:
 
@@ -62,13 +62,13 @@ def error_check(console_out, ID, path, errorfile):
             elif regexes['compression2'].search(line):
                 continue
             elif regexes['warn'].search(line):
-                problem_file_ids.add(ID)
+                problem_file_ids[ID] = 'ly error or warn'
                 err.write('warning: ' + ID + ' ' + path + '\n' + line + '\n')
             elif regexes['err'].search(line):
-                problem_file_ids.add(ID)
+                problem_file_ids[ID] = 'ly error or warn'
                 err.write('error: ' + ID + ' ' + path + '\n' + line + '\n')
             elif regexes['clairnote'].search(line):
-                problem_file_ids.add(ID)
+                problem_file_ids[ID] = 'ly error or warn'
                 err.write('clairnote-code problem: ' + ID + ' ' + path + '\n')
                 if regexes['ambitus'].search(line):
                     err.write('Ambitus engraver: ' + ID + ' ' + path + '\n')
@@ -129,17 +129,22 @@ def get_row_log_header(row, lyfile):
     ]
 
 def run_lilypond_and_log(command, logfile, row, lyfile, errorfile):
-    returncode, console_out = run_command(command)
+    try:
+        returncode, console_out = run_command(command)
+        # TODO: take advantage of returncode, and also write full error logs to error file
+        problem_ids = error_check(console_out, row['id'], os.path.join(row['path'], lyfile), errorfile)
+    except Exception as e:
+        #
+        console_out = ["Exception raised when running LilyPond command: " + str(e)]
+        problem_ids = {row['id']: 'exception raised'}
     log_lines(console_out, logfile)
     print_lines(console_out)
-    # TODO: take advantage of returncode, and also write full error logs to error file
-    problem_ids = error_check(console_out, row['id'], os.path.join(row['path'], lyfile), errorfile)
     return problem_ids
 
 def handle_rows(rows, args):
     ''' args includes: rootdir, logfile, midi, midionly, noletter, noa4,
                        errorfile, ly_stable, ly_dev, stable_version '''
-    problem_file_ids = set()
+    problem_file_ids = dict()
     for row in rows:
         lyfilenames = row['filename'].split(',,, ')
         version = row['ly-version']
@@ -210,7 +215,7 @@ def update_csv(problem_file_ids, oldcsv, newcsv, logfile):
                     row['error-status?'] = 'error'
                     # problem_file_ids.discard(ID)
                     row['omit?'] = 'T'
-                    row['omit-reason'] = 'ly error or warn'
+                    row['omit-reason'] = problem_file_ids[ID]
             writer.writerow(row)
         print('Done with CSV.\nOld:', oldcsv, '\nNew:', newcsv)
 
