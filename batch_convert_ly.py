@@ -8,6 +8,7 @@ parser = argparse.ArgumentParser()
 # convert-ly any files BETWEEN the low and high versions
 parser.add_argument("--lowvsn", help="The lowest version to convert", default='0.0.0')
 parser.add_argument("--highvsn", help="The highest version to convert", default='100.0.0')
+parser.add_argument("--count", help="Only convert this many rows from the csv file.")
 
 parser.add_argument("mode", help="The mode for parsing ly files, e.g. 'mutopia' or 'thesession'")
 parser.add_argument("logfile", help = "Log console output to this file")
@@ -45,9 +46,11 @@ def main(args):
     create_directories(args.logfile)
     create_directories(args.errorfile)
 
-    error_summary = ['', 'ERROR SUMMARY', '']
+    error_summary = []
     muto = args.mode == 'mutopia'
-    for row in read_csv(args.csvpath):
+    csv_data = read_csv(args.csvpath)
+    rows = csv_data[:int(args.count)] if args.count else csv_data
+    for row in rows:
         vsn = row['ly-version']
 
         if (vsn_compare(vsn, greater_than, args.lowvsn) and
@@ -76,7 +79,9 @@ def main(args):
                     error_summary.append(filepath)
                     log_lines(console_out, args.errorfile)
 
-    log_lines(error_summary, args.errorfile)
+    error_header = ['CONVERT-LY ERROR SUMMARY']
+    print('Done. There were', len(error_summary), 'errors.')
+    log_lines(error_header + error_summary, args.errorfile)
 
 
 if __name__ == "__main__":
