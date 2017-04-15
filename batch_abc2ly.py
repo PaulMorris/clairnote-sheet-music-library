@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import subprocess, os, argparse
 from console_utils import run_command, log_lines, print_lines
+from ly_parsing import create_directories
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--filecount", help="Only convert this many files")
@@ -10,6 +11,15 @@ parser.add_argument("indir", help="Read files from this directory")
 parser.add_argument("outdir", help = "Write the converted files to this directory")
 
 def main(args):
+    if not os.path.exists(args.indir):
+        print('Oops, bad path given for the directory that should contain the abc files.')
+        return
+
+    # create_directories takes a full path to a file, but does nothing with the file name part
+    create_directories(os.path.join(args.outdir, 'no-file.txt'))
+    create_directories(args.errorfile)
+    create_directories(args.logfile)
+
     error_summary = ['', 'ERROR SUMMARY', '']
     for dirpath, dirnames, filenames in os.walk(args.indir):
         if filenames:
