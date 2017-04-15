@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-import csv, json, re, argparse
+import csv, json, re, argparse, os
 from composers_etc import composer_list, instrument_list, style_list, two_word_insts
-from ly_parsing import regexes, read_csv
+from ly_parsing import regexes, read_csv, create_directories
 
 parser = argparse.ArgumentParser()
 parser.add_argument("mode", help = "The mode for input and output e.g. 'mutopia' or 'thesession'")
@@ -305,6 +305,13 @@ def html_main(style_tally, style_list, instrument_tally, instrument_list, compos
 
 
 def main(args):
+    if not os.path.exists(args.csvfile):
+        print('Oops, bad path given for the csv input file.')
+        return
+    if args.htmlfile:
+        create_directories(args.htmlfile)
+    create_directories(args.jsfile)
+
     try:
         if args.mode == 'mutopia':
             style_tally, instrument_tally, composer_tally = make_json_mutopia(args.csvfile, args.jsfile)

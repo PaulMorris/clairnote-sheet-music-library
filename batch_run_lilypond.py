@@ -132,7 +132,6 @@ def run_lilypond_and_log(command, logfile, row, lyfile, errorfile):
         # TODO: take advantage of returncode, and also write full error logs to error file
         problem_ids = error_check(console_out, row['id'], os.path.join(row['path'], lyfile), errorfile)
     except Exception as e:
-        #
         console_out = ["Exception raised when running LilyPond command: " + str(e)]
         problem_ids = {row['id']: 'exception raised'}
     log_lines(console_out, logfile)
