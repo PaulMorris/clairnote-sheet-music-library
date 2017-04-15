@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import csv, os, re, argparse, shutil
-from ly_parsing import get_ly_filenames, regexes, read_csv
+from ly_parsing import get_ly_filenames, regexes, read_csv, create_directories
 
 # COMMAND LINE ARGUMENTS
 parser = argparse.ArgumentParser()
@@ -186,6 +186,14 @@ def handle_csv(csvpath, rootdir, outdir, mode):
                 handle_row_session(row, rootdir, outdir)
 
 def main(args):
+    if not os.path.exists(args.rootdir):
+        print('Oops, bad path given for the directory that should contain the ly files.')
+        return
+    if not os.path.exists(args.csvpath):
+        print('Oops, bad path given for the csv input file.')
+        return
+    create_directories(args.outdir)
+
     try:
         if args.mode == 'mutopia':
             handle_csv(args.csvpath, args.rootdir, args.outdir, args.mode)
