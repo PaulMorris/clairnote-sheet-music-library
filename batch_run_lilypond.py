@@ -218,6 +218,16 @@ def update_csv(problem_file_ids, oldcsv, newcsv, logfile):
         print('Done with CSV.\nOld:', oldcsv, '\nNew:', newcsv)
 
 def main(args):
+    if not os.path.exists(args.rootdir):
+        print('Oops, bad path given for the directory that should contain the ly files.')
+        return
+    if not os.path.exists(args.oldcsv):
+        print('Oops, bad path given for the csv input file.')
+        return
+    create_directories(args.newcsv)
+    create_directories(args.logfile)
+    create_directories(args.errorfile)
+
     rows = triage_rows(args)
     if args.dryrun:
         print('Dry run: stopping, would otherwise run LilyPond on', len(rows), 'items.')
