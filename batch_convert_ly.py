@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import subprocess, csv, os, argparse
-from ly_parsing import vsn_compare, less_than, greater_than, get_all_lilypond_filenames
+from ly_parsing import vsn_compare, less_than, greater_than, get_all_lilypond_filenames, read_csv
 from console_utils import run_command, log_lines, print_lines
 
 parser = argparse.ArgumentParser()
@@ -37,36 +37,34 @@ def get_command(fromvsn, tovsn, filepath):
 def main(args):
     error_summary = ['', 'ERROR SUMMARY', '']
     muto = args.mode == 'mutopia'
-    with open(args.csvpath, newline='') as csvfile:
-        reader = csv.DictReader(csvfile)
-        for row in reader:
-            vsn = row['ly-version']
+    for row in read_csv(args.csvpath):
+        vsn = row['ly-version']
 
-            if (vsn_compare(vsn, greater_than, args.lowvsn) and
-                vsn_compare(vsn, less_than, args.highvsn) and
-                row['omit?'] != 'T'):
+        if (vsn_compare(vsn, greater_than, args.lowvsn) and
+            vsn_compare(vsn, less_than, args.highvsn) and
+            row['omit?'] != 'T'):
 
-                if muto:
-                    lypaths = get_ly_paths(os.path.join(args.indir, row['path']))
-                else:
-                    lypaths = [os.path.join(args.indir, row['path'], row['filename'])]
+            if muto:
+                lypaths = get_ly_paths(os.path.join(args.indir, row['path']))
+            else:
+                lypaths = [os.path.join(args.indir, row['path'], row['filename'])]
 
-                print('____________________________')
-                print(row['id'])
-                mutocomp = row['mutopiacomposer'] if muto else ''
-                print(row['parse-order'], ': ', mutocomp, row['cn-title'])
+            print('____________________________')
+            print(row['id'])
+            mutocomp = row['mutopiacomposer'] if muto else ''
+            print(row['parse-order'], ': ', mutocomp, row['cn-title'])
 
-                for filepath in lypaths:
-                    command = get_command(row['ly-version'], args.highvsn, filepath)
-                    returncode, console_out = run_command(command)
+            for filepath in lypaths:
+                command = get_command(row['ly-version'], args.highvsn, filepath)
+                returncode, console_out = run_command(command)
 
-                    console_out_returncode = console_out + [str(returncode)]
-                    log_lines(console_out_returncode, args.logfile)
-                    print_lines(console_out_returncode)
+                console_out_returncode = console_out + [str(returncode)]
+                log_lines(console_out_returncode, args.logfile)
+                print_lines(console_out_returncode)
 
-                    if returncode == 1:
-                        error_summary.append(filepath)
-                        log_lines(console_out, args.errorfile)
+                if returncode == 1:
+                    error_summary.append(filepath)
+                    log_lines(console_out, args.errorfile)
 
     log_lines(error_summary, args.errorfile)
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import os, csv, shutil, argparse
-from ly_parsing import row_should_be_omitted
+from ly_parsing import row_should_be_omitted, read_csv
 from ftplib import FTP
 from retrying import retry
 
@@ -84,20 +84,18 @@ def upload_rows(rootdir, ftppath, rows, connection):
 
 def main(args):
     rows_to_upload = []
-    with open(args.csvfile, newline='') as f:
-        reader = csv.DictReader(f)
 
-        for row in reader:
-            if not row_should_be_omitted(args, row):
-                rows_to_upload.append(row)
+    for row in read_csv(args.csvfile):
+        if not row_should_be_omitted(args, row):
+            rows_to_upload.append(row)
 
-        if (args.dryrun):
-            print('Dry run: stopping, would otherwise copy', len(rows_to_upload), 'items.')
-        else:
-            connection = make_ftp_connection(args.ftpaddress, args.login, args.pwd, args.ftppath)
-            upload_rows(args.rootdir, args.ftppath, rows_to_upload, connection)
-            quit_ftp_connection(connection)
-            print('Done uploading.')
+    if (args.dryrun):
+        print('Dry run: stopping, would otherwise copy', len(rows_to_upload), 'items.')
+    else:
+        connection = make_ftp_connection(args.ftpaddress, args.login, args.pwd, args.ftppath)
+        upload_rows(args.rootdir, args.ftppath, rows_to_upload, connection)
+        quit_ftp_connection(connection)
+        print('Done uploading.')
 
 if __name__ == "__main__":
     main(parser.parse_args())

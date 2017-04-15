@@ -3,8 +3,8 @@ import csv_data_from_files as csv_script
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 
-# takes a csv file path and returns a list of dicts of the csv data
-def readCSV(file_path):
+def read_csv(file_path, newline=''):
+    ''' Takes a csv file path and returns a list of dicts of the csv data. '''
     with open(file_path) as f:
         return list(csv.DictReader(f))
 
@@ -16,8 +16,8 @@ class csv_data_from_files_test(unittest.TestCase):
         _, path_temp = tempfile.mkstemp()
         subprocess.run(["python3", "csv_data_from_files.py", "mutopia", "tests/data/test-mutopia-trad-repo", "-o", path_temp])
 
-        expected = readCSV(os.path.join(DATA_DIR, "expected-csv-for-test-mutopia-trad-repo", "py1-output.csv"))
-        result = readCSV(path_temp)
+        expected = read_csv(os.path.join(DATA_DIR, "expected-csv-for-test-mutopia-trad-repo", "py1-output.csv"))
+        result = read_csv(path_temp)
 
         for d in expected:
             d['mtime'] = None

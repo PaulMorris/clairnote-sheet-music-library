@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from subprocess import run, PIPE, STDOUT
 import csv, os, re, argparse, subprocess
-from ly_parsing import regexes, create_directories, remove_file, row_should_be_omitted
+from ly_parsing import regexes, create_directories, remove_file, row_should_be_omitted, read_csv
 from console_utils import run_command, log_lines, print_lines
 
 parser = argparse.ArgumentParser()
@@ -111,11 +111,9 @@ def rename_pdf(file_path_no_extension, suffix, logfile):
 
 def triage_rows(args):
     rows = []
-    with open(args.oldcsv, newline='') as csvfile:
-        reader = csv.DictReader(csvfile)
-        for row in reader:
-            if not row_should_be_omitted(args, row):
-                rows.append(row)
+    for row in read_csv(args.oldcsv):
+        if not row_should_be_omitted(args, row):
+            rows.append(row)
     return rows
 
 def get_row_log_header(row, lyfile):

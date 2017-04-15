@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import csv, json, re, argparse
 from composers_etc import composer_list, instrument_list, style_list, two_word_insts
-from ly_parsing import regexes
+from ly_parsing import regexes, read_csv
 
 parser = argparse.ArgumentParser()
 parser.add_argument("mode", help = "The mode for input and output e.g. 'mutopia' or 'thesession'")
@@ -14,13 +14,11 @@ parser.add_argument("--htmlfile", help = "Path to the new HTML file (output)")
 def report_new_additions_session(csvfile):
     count = 0
     additions = set()
-    with open(csvfile, newline='') as source:
-        reader = csv.DictReader(source)
-        for row in reader:
 
-            if row['omit?'] != 'T' and row['new?'] == 'T':
-                additions.add(row['cn-title'])
-                count += 1
+    for row in read_csv(csvfile):
+        if row['omit?'] != 'T' and row['new?'] == 'T':
+            additions.add(row['cn-title'])
+            count += 1
 
     # TODO: distinguish new tune additions and new settings of existing tunes
 
@@ -40,23 +38,20 @@ def report_new_additions_mutopia(csvfile):
     count = 0
     missing_composers = set()
 
-    with open(csvfile, newline='') as source:
-        reader = csv.DictReader(source)
-        for row in reader:
+    for row in read_csv(csvfile):
+        if row['mutopiacomposer'] not in composer_lookup:
+            missing_composers.add(row['mutopiacomposer'])
 
-            if row['mutopiacomposer'] not in composer_lookup:
-                missing_composers.add(row['mutopiacomposer'])
-
-            elif row['omit?'] != 'T' and row['new?'] == 'T':
-                count += 1
-                print(
-                    # count,
-                    # row['id'],
-                    # int(row['id']) in oldIds,
-                    # row['mutopiacomposer'],
-                    composer_lookup[row['mutopiacomposer']] +  ' | ' +
-                    row['cn-title'] + ' | ' +
-                    row['cn-instrument'])
+        elif row['omit?'] != 'T' and row['new?'] == 'T':
+            count += 1
+            print(
+                # count,
+                # row['id'],
+                # int(row['id']) in oldIds,
+                # row['mutopiacomposer'],
+                composer_lookup[row['mutopiacomposer']] +  ' | ' +
+                row['cn-title'] + ' | ' +
+                row['cn-instrument'])
 
     print(str(count) + ' new additions.')
     if len(missing_composers) > 0:
@@ -75,27 +70,25 @@ def make_json_session(csvfile, jsfile):
     titles = []
     titles_to_ids = {}
 
-    with open(csvfile, newline='') as csvf:
-        reader = csv.DictReader(csvf)
-        for row in reader:
-            if row['omit?'] != 'T':
+    for row in read_csv(csvfile):
+        if row['omit?'] != 'T':
 
-                ID = row['tune-id']
-                print('ID', ID)
-                if ID in items_dict:
-                    items_dict[ID][4].append(int(row['setting-number']))
-                    items_dict[ID][4].sort()
-                else:
-                    fname = regexes['session-filename'].search(row['filename']).group(1)
-                    titles.append(row['cn-title'])
-                    titles_to_ids[row['cn-title']] = ID
-                    items_dict[ID] = [
-                         row['cn-title'],
-                         row['meter'],
-                         fname,
-                         row['setting-id'],
-                         [int(row['setting-number'])]
-                    ]
+            ID = row['tune-id']
+            print('ID', ID)
+            if ID in items_dict:
+                items_dict[ID][4].append(int(row['setting-number']))
+                items_dict[ID][4].sort()
+            else:
+                fname = regexes['session-filename'].search(row['filename']).group(1)
+                titles.append(row['cn-title'])
+                titles_to_ids[row['cn-title']] = ID
+                items_dict[ID] = [
+                     row['cn-title'],
+                     row['meter'],
+                     fname,
+                     row['setting-id'],
+                     [int(row['setting-number'])]
+                ]
 
     titles.sort()
     sorted_ids = []
@@ -154,52 +147,50 @@ def make_json_mutopia(csvfile, jsfile):
     # a list/array of ids ordered into the default sort order for 'browsing'
     items_sorted_ids = []
 
-    with open(csvfile, newline='') as csvf:
-        reader = csv.DictReader(csvf)
-        for row in reader:
-            if row['omit?'] != 'T':
+    for row in read_csv(csvfile):
+        if row['omit?'] != 'T':
 
-                ID = int(row['id'])
-                items_sorted_ids.append(ID);
+            ID = int(row['id'])
+            items_sorted_ids.append(ID);
 
-                # INSTRUMENTS
-                insts, no_instrument_match, unrecognized_inst_tokens = inst_classifier(row['cn-instrument'], row['id'])
-                for i in insts:
-                    if i in instrument_tally:
-                        instrument_tally[i] += 1
-                    else:
-                        instrument_tally[i] = 1
-
-                # STYLES
-                # handle style 'Popular / Dance' that contains forward slash
-                stl = row['cn-style'].replace(' / ', '')
-                if stl in style_tally:
-                    style_tally[stl] += 1
+            # INSTRUMENTS
+            insts, no_instrument_match, unrecognized_inst_tokens = inst_classifier(row['cn-instrument'], row['id'])
+            for i in insts:
+                if i in instrument_tally:
+                    instrument_tally[i] += 1
                 else:
-                    style_tally[stl] = 1
+                    instrument_tally[i] = 1
 
-                # COMPOSERS
-                comp = row['mutopiacomposer']
-                if comp in composer_tally:
-                    composer_tally[comp] += 1
-                else:
-                    composer_tally[comp] = 1
+            # STYLES
+            # handle style 'Popular / Dance' that contains forward slash
+            stl = row['cn-style'].replace(' / ', '')
+            if stl in style_tally:
+                style_tally[stl] += 1
+            else:
+                style_tally[stl] = 1
 
-                multifile = (1 < len(row['filename'].split(',,, ')))
+            # COMPOSERS
+            comp = row['mutopiacomposer']
+            if comp in composer_tally:
+                composer_tally[comp] += 1
+            else:
+                composer_tally[comp] = 1
 
-                items_dict[ID] = [
-                     stl,
-                     comp, # 1
-                     row['cn-title'],
-                     insts, # 3
-                     row['path'], # 4
-                     False if multifile else row['filename'][:-3],
-                     row['license-type'] + row['license-vsn'], # 6
-                     row['cn-opus'],
-                     row['cn-poet'], # 8
-                     row['date'],
-                     row['arranger'], # 10
-                ]
+            multifile = (1 < len(row['filename'].split(',,, ')))
+
+            items_dict[ID] = [
+                 stl,
+                 comp, # 1
+                 row['cn-title'],
+                 insts, # 3
+                 row['path'], # 4
+                 False if multifile else row['filename'][:-3],
+                 row['license-type'] + row['license-vsn'], # 6
+                 row['cn-opus'],
+                 row['cn-poet'], # 8
+                 row['date'],
+                 row['arranger'], # 10
+            ]
 
     json_out = json.dumps(items_dict)
     print('JSON parsed.')

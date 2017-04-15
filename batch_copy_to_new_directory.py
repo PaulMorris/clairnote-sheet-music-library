@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import os, csv, shutil, argparse
-from ly_parsing import row_should_be_omitted
+from ly_parsing import row_should_be_omitted, read_csv
 
 # ARGUMENT PARSING
 
@@ -46,34 +46,30 @@ def copy_session(rootdir, outdir, row):
 
 def main(args):
     rows_to_copy = []
+    for row in read_csv(args.csvfile):
+        if not row_should_be_omitted(args, row):
+            rows_to_copy.append(row)
 
-    with open(args.csvfile, newline='') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
+    if (args.dryrun):
+        print('Dry run: stopping, would otherwise copy', len(rows_to_copy), 'items.')
+    else:
+        count = 0
+        for row in rows_to_copy:
+            count += 1
+            try:
+                if (args.mode == 'mutopia'):
+                    to_print_out = copy_mutopia(args.rootdir, args.outdir, row)
+                elif (args.mode == 'thesession'):
+                    to_print_out = copy_session(args.rootdir, args.outdir, row)
+                else:
+                    raise ValueError("Oops! We need a valid mode argument, either 'mutopia' or 'thesession'.")
 
-            if not row_should_be_omitted(args, row):
-                rows_to_copy.append(row)
+                print(str(count) + ' ' + to_print_out)
 
-        if (args.dryrun):
-            print('Dry run: stopping, would otherwise copy', len(rows_to_copy), 'items.')
-        else:
-            count = 0
-            for row in rows_to_copy:
-                count += 1
-                try:
-                    if (args.mode == 'mutopia'):
-                        to_print_out = copy_mutopia(args.rootdir, args.outdir, row)
-                    elif (args.mode == 'thesession'):
-                        to_print_out = copy_session(args.rootdir, args.outdir, row)
-                    else:
-                        raise ValueError("Oops! We need a valid mode argument, either 'mutopia' or 'thesession'.")
+            except ValueError as err:
+                print(err.args)
 
-                    print(str(count) + ' ' + to_print_out)
-
-                except ValueError as err:
-                    print(err.args)
-
-            print('Done.', count, 'pieces copied.')
+        print('Done.', count, 'pieces copied.')
 
 if __name__ == "__main__":
     main(parser.parse_args())

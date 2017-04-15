@@ -1,4 +1,4 @@
-import re, os
+import re, os, csv
 from itertools import zip_longest
 
 # bulk lilypond collection functions
@@ -54,6 +54,11 @@ def regex_search(r, s):
         return None
     else:
         return a.group()
+
+def read_csv(file_path, newline=''):
+    ''' Takes a csv file path and returns a list of dicts of the csv data. '''
+    with open(file_path) as f:
+        return list(csv.DictReader(f))
 
 def balanced_brackets(arg):
     """ Takes a string (e.g. starting with "\header" and ending at the end of

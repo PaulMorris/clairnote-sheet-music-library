@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import csv, os, re, argparse, shutil
-from ly_parsing import get_ly_filenames, regexes
+from ly_parsing import get_ly_filenames, regexes, read_csv
 
 # COMMAND LINE ARGUMENTS
 parser = argparse.ArgumentParser()
@@ -178,14 +178,12 @@ def handle_row_session(row, rootdir, outdir):
 
 
 def handle_csv(csvpath, rootdir, outdir, mode):
-    with open(csvpath, newline = '') as csvfile:
-        reader = csv.DictReader(csvfile)
-        for row in reader:
-            if row['omit?'] != 'T' and row['cn-code'] == 'False' and row['new?'] == 'T':
-                if mode == 'mutopia':
-                    handle_row_mutopia(row, rootdir, outdir)
-                elif mode == 'thesession':
-                    handle_row_session(row, rootdir, outdir)
+    for row in read_csv(csvpath):
+        if row['omit?'] != 'T' and row['cn-code'] == 'False' and row['new?'] == 'T':
+            if mode == 'mutopia':
+                handle_row_mutopia(row, rootdir, outdir)
+            elif mode == 'thesession':
+                handle_row_session(row, rootdir, outdir)
 
 def main(args):
     try:

@@ -1,21 +1,21 @@
 import csv
+from ly_parsing import read_csv
 
 def get_old_meta_data(old_csv, id_field_name):
     old_meta_data = {}
-    with open(old_csv, newline='') as old_csv_read:
-        reader = csv.DictReader(old_csv_read)
-        for row in reader:
-            item_id = int(row[id_field_name])
 
-            if row['new?'] == 'T':
-                print('\nOOPS! - There is an item marked as NEW in the OLD csv file... ID: ' + str(item_id))
+    for row in read_csv(old_csv):
+        item_id = int(row[id_field_name])
 
-            old_meta_data[item_id] = {
-                'omit?': row['omit?'],
-                'omit-reason': row['omit-reason'],
-                'new?': row['new?'],
-                'error-status?': row['error-status?']
-            }
+        if row['new?'] == 'T':
+            print('\nOOPS! - There is an item marked as NEW in the OLD csv file... ID: ' + str(item_id))
+
+        old_meta_data[item_id] = {
+            'omit?': row['omit?'],
+            'omit-reason': row['omit-reason'],
+            'new?': row['new?'],
+            'error-status?': row['error-status?']
+        }
     return old_meta_data
 
 def merge(old_csv, new_csv_data, id_field_name):
