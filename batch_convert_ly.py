@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 import subprocess, csv, os, argparse
-from ly_parsing import vsn_compare, less_than, greater_than, get_all_lilypond_filenames, read_csv
 from console_utils import run_command, log_lines, print_lines
+from ly_parsing import (vsn_compare, less_than, greater_than,
+    get_all_lilypond_filenames, read_csv, create_directories)
 
 parser = argparse.ArgumentParser()
 # convert-ly any files BETWEEN the low and high versions
@@ -35,6 +36,15 @@ def get_command(fromvsn, tovsn, filepath):
     ]
 
 def main(args):
+    if not os.path.exists(args.indir):
+        print('Oops, bad path given for the directory that should contain the ly files.')
+        return
+    if not os.path.exists(args.csvpath):
+        print('Oops, bad path given for the csv input file.')
+        return
+    create_directories(args.logfile)
+    create_directories(args.errorfile)
+
     error_summary = ['', 'ERROR SUMMARY', '']
     muto = args.mode == 'mutopia'
     for row in read_csv(args.csvpath):
