@@ -2,7 +2,7 @@
 import os, csv, argparse
 from ly_parsing import (regexes, regex_search, vsn_compare, greater_or_equal,
     get_all_lilypond_filenames, get_ly_filenames, get_version, get_included_files,
-    get_header_data, check_for_clairnote_code, get_most_recent_mtime)
+    get_header_data, check_for_clairnote_code, get_most_recent_mtime, create_directories)
 from csv_merging import merge_csv_data
 
 # walks through a directory and subdirectories creating a csv file with data from the ly files
@@ -10,8 +10,8 @@ from csv_merging import merge_csv_data
 # COMMAND LINE ARGUMENTS
 parser = argparse.ArgumentParser()
 parser.add_argument("mode", help = "The mode for parsing ly files, e.g. 'mutopia' or 'thesession'")
+parser.add_argument("csvout", help="Path and file name for the CSV file output")
 parser.add_argument("rootdir", help="The root directory that contains the ly files")
-parser.add_argument("-o", "--csv-output", help="Path and file name for the CSV file output")
 parser.add_argument("-p", "--csv-previous", help="Path and file name of the previous CSV file")
 parser.add_argument("-l", "--earliest-ly-version", help="The earliest LilyPond version to include in CSV file (e.g. '2.14.0')", default='0.0.0')
 
@@ -216,6 +216,14 @@ def main(args):
         else:
             raise ValueError("Oops! We need a valid mode argument, either 'mutopia' or 'thesession'.")
 
+        if not os.path.exists(args.rootdir):
+            print('Oops, bad path given for the directory that should contain the lilypond files.')
+            return
+        if args.csv_previous and not os.path.exists(args.csv_previous):
+            print('Oops, bad path given for previous csv file.')
+            return
+        create_directories(args.csvout)
+
         csv_keys = get_csv_keys(args.mode)
 
         pieces, subdir_skips = file_paths_func(args.rootdir)
@@ -232,12 +240,12 @@ def main(args):
         final_csv_data = merge_csv_data(args.csv_previous, csv_data, 'id') if args.csv_previous else csv_data
 
         # GENERATE CSV FILE
-        with open(args.csv_output or 'csv-output.csv', 'w') as csvfile:
+        with open(args.csvout, 'w') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames = csv_keys)
             writer.writeheader()
             for line in final_csv_data:
                 writer.writerow(line)
-            print('CSV file created: ' + args.csv_output)
+            print('CSV file created: ' + args.csvout)
 
     except ValueError as err:
         print(err.args)
