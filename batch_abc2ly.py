@@ -4,7 +4,7 @@ from console_utils import run_command, log_lines, print_lines
 from ly_parsing import create_directories
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--filecount", help="Only convert this many files")
+parser.add_argument("--count", help="Only convert this many files")
 parser.add_argument("logfile", help = "Log console output to this file")
 parser.add_argument("errorfile", help="Log errors to this file")
 parser.add_argument("indir", help="Read files from this directory")
@@ -20,12 +20,12 @@ def main(args):
     create_directories(args.errorfile)
     create_directories(args.logfile)
 
-    error_summary = ['', 'ERROR SUMMARY', '']
+    error_summary = []
     for dirpath, dirnames, filenames in os.walk(args.indir):
         if filenames:
             # get list of all .abc files in directory
             abcs = filter(lambda name: name[-4:] == '.abc', filenames)
-            abc_filenames = list(abcs)[:int(args.filecount)] if args.filecount else abcs
+            abc_filenames = list(abcs)[:int(args.count)] if args.count else abcs
 
             for name in abc_filenames:
                 readpath = os.path.join(dirpath, name)
@@ -46,7 +46,9 @@ def main(args):
                     error_summary.append(readpath)
                     log_lines(console_out, args.errorfile)
 
-    log_lines(error_summary, args.errorfile)
+    error_header = ['ABC2LY ERROR SUMMARY']
+    print('Done. There were', len(error_summary), 'errors.')
+    log_lines(error_header + error_summary, args.errorfile)
 
 if __name__ == "__main__":
     main(parser.parse_args())
