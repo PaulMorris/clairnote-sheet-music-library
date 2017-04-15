@@ -1,5 +1,6 @@
 import os, argparse, urllib.request
 from time import sleep
+from ly_parsing import create_directories
 
 parser = argparse.ArgumentParser()
 parser.add_argument("fromid", help="Start with this tune id number")
@@ -9,9 +10,9 @@ parser.add_argument("outdir", help = "The output directory to save the abc files
 
 # The abc files are named with 'file_name-1.abc', 'file_name-2.abc' corresponding
 # to urls like https://thesession.org/tunes/26/abc/1 where 26 is the tune id and
-# /1, /2 at the end corresponds to '-1' '-2' in the file name.
-# For each tune we start with urls at '/1' and count up, checking the name of
-# the file returned, when the file returned doesn't have a '-' but is just
+# /1, /2 at the end corresponds to '-1' '-2' in the file name (the setting).
+# For each tune we start with urls at '/1' and count up.  We check the name of
+# the file returned and when it doesn't have a '-' but is just
 # 'file_name.abc' then we have run out of settings.
 # 'file_name.abc' is the same as 'file_name-1.abc'
 
@@ -30,6 +31,10 @@ def get_file_name (url):
         return None
 
 def main(args):
+    # create directories takes a full path to a file, but does nothing with the file name part
+    create_directories(os.path.join(args.outdir, 'no-file.txt'))
+    create_directories(args.errorfile)
+
     for i in range(int(args.fromid), int(args.toid) + 1):
         tune_url = "https://thesession.org/tunes/" + str(i) + "/abc/"
         counter = 1
@@ -40,12 +45,11 @@ def main(args):
             file_name = get_file_name(setting_url)
 
             # TODO: if a setting fails, the next settings for that tune will not be tried.
-            # So far all errors are on setting 1, so only whole tunes are missing so far.
+            # So far most errors are on setting 1, so usually it is whole tunes that are missing.
             if not file_name:
-                f = open(args.errorfile, "a")
-                f.write(setting_url + " :Failed at get_file_name\n")
-                print('ERROR:' + str(i) + ' - ' + str(counter) + ' - ' + setting_url)
-                f.close()
+                with open(args.errorfile, 'a') as f:
+                    f.write(setting_url + " :Failed at get_file_name\n")
+                print('ERROR: ' + str(i), str(counter) + ' - ' + setting_url)
                 counter = 0
 
             # see above, identify files with one or two digit setting numbers,
