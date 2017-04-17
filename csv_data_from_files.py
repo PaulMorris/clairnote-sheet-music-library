@@ -2,7 +2,7 @@
 import os, csv, argparse
 from ly_parsing import (regexes, regex_search, vsn_compare, greater_or_equal,
     get_all_lilypond_filenames, get_ly_filenames, get_version, get_included_files,
-    get_header_data, check_for_clairnote_code, get_most_recent_mtime, create_directories)
+    get_header_data, check_for_clairnote_code, get_most_recent_mtime, makedirs_filepath)
 from csv_merging import merge_csv_data
 
 # walks through a directory and subdirectories creating a csv file with data from the ly files
@@ -222,7 +222,7 @@ def main(args):
         if args.csv_previous and not os.path.exists(args.csv_previous):
             print('Oops, bad path given for previous csv file.')
             return
-        create_directories(args.csvout)
+        makedirs_filepath(args.csvout)
 
         csv_keys = get_csv_keys(args.mode)
 

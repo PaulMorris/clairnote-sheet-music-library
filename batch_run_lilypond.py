@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from subprocess import run, PIPE, STDOUT
 import csv, os, re, argparse, subprocess
-from ly_parsing import regexes, create_directories, remove_file, row_should_be_omitted, read_csv
+from ly_parsing import regexes, makedirs_filepath, remove_file, row_should_be_omitted, read_csv
 from console_utils import run_command, log_lines, print_lines
 
 parser = argparse.ArgumentParser()
@@ -196,7 +196,7 @@ def update_csv(problem_file_ids, oldcsv, newcsv, logfile):
     log_lines(message, logfile)
     print_lines(message)
 
-    create_directories(newcsv)
+    makedirs_filepath(newcsv)
 
     with open(oldcsv, newline='') as oldf, open(newcsv, 'w') as newf:
         reader = csv.DictReader(oldf)
@@ -223,9 +223,9 @@ def main(args):
     if not os.path.exists(args.oldcsv):
         print('Oops, bad path given for the csv input file.')
         return
-    create_directories(args.newcsv)
-    create_directories(args.logfile)
-    create_directories(args.errorfile)
+    makedirs_filepath(args.newcsv)
+    makedirs_filepath(args.logfile)
+    makedirs_filepath(args.errorfile)
 
     rows = triage_rows(args)
     if args.dryrun:

@@ -1,6 +1,6 @@
 import os, argparse, urllib.request, urllib.error
 from time import sleep
-from ly_parsing import create_directories
+from ly_parsing import makedirs_filepath, makedirs_dirpath
 
 parser = argparse.ArgumentParser()
 parser.add_argument("fromid", help="Start with this tune id number")
@@ -107,9 +107,8 @@ def download_abc_files(tune_numbers, outdir, errorfile):
     return errors
 
 def main(args):
-    # create_directories takes a full path to a file, but does nothing with the file name part
-    create_directories(os.path.join(args.outdir, 'no-file.txt'))
-    create_directories(args.errorfile)
+    makedirs_dirpath(args.outdir)
+    makedirs_filepath(args.errorfile)
     tune_numbers = range(int(args.fromid), int(args.toid) + 1)
     errors = download_abc_files(tune_numbers, args.outdir, args.errorfile)
     check_errors(errors, args.errorfile)

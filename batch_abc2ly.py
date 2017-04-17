@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import subprocess, os, argparse
 from console_utils import run_command, log_lines, print_lines
-from ly_parsing import create_directories
+from ly_parsing import makedirs_dirpath, makedirs_filepath
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--count", help="Only convert this many files")
@@ -15,10 +15,9 @@ def main(args):
         print('Oops, bad path given for the directory that should contain the abc files.')
         return
 
-    # create_directories takes a full path to a file, but does nothing with the file name part
-    create_directories(os.path.join(args.outdir, 'no-file.txt'))
-    create_directories(args.errorfile)
-    create_directories(args.logfile)
+    makedirs_dirpath(args.outdir)
+    makedirs_filepath(args.errorfile)
+    makedirs_filepath(args.logfile)
 
     error_summary = []
     for dirpath, dirnames, filenames in os.walk(args.indir):

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import csv, os, re, argparse, shutil
-from ly_parsing import get_ly_filenames, regexes, read_csv, create_directories
+from ly_parsing import get_ly_filenames, regexes, read_csv, makedirs_dirpath
 
 # COMMAND LINE ARGUMENTS
 parser = argparse.ArgumentParser()
@@ -192,7 +192,7 @@ def main(args):
     if not os.path.exists(args.csvpath):
         print('Oops, bad path given for the csv input file.')
         return
-    create_directories(args.outdir)
+    makedirs_dirpath(args.outdir)
 
     try:
         if args.mode == 'mutopia':

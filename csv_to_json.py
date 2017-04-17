@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import csv, json, re, argparse, os
 from composers_etc import composer_list, instrument_list, style_list, two_word_insts
-from ly_parsing import regexes, read_csv, create_directories
+from ly_parsing import regexes, read_csv, makedirs_filepath
 
 parser = argparse.ArgumentParser()
 parser.add_argument("mode", help = "The mode for input and output e.g. 'mutopia' or 'thesession'")
@@ -309,8 +309,8 @@ def main(args):
         print('Oops, bad path given for the csv input file.')
         return
     if args.htmlfile:
-        create_directories(args.htmlfile)
-    create_directories(args.jsfile)
+        makedirs_filepath(args.htmlfile)
+    makedirs_filepath(args.jsfile)
 
     try:
         if args.mode == 'mutopia':

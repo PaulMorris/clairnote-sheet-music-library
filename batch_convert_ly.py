@@ -2,7 +2,7 @@
 import subprocess, csv, os, argparse
 from console_utils import run_command, log_lines, print_lines
 from ly_parsing import (vsn_compare, less_than, greater_than,
-    get_all_lilypond_filenames, read_csv, create_directories)
+    get_all_lilypond_filenames, read_csv, makedirs_filepath)
 
 parser = argparse.ArgumentParser()
 # convert-ly any files BETWEEN the low and high versions
@@ -43,8 +43,8 @@ def main(args):
     if not os.path.exists(args.csvpath):
         print('Oops, bad path given for the csv input file.')
         return
-    create_directories(args.logfile)
-    create_directories(args.errorfile)
+    makedirs_filepath(args.logfile)
+    makedirs_filepath(args.errorfile)
 
     error_summary = []
     muto = args.mode == 'mutopia'

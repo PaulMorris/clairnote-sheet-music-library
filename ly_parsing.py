@@ -242,11 +242,18 @@ def get_most_recent_mtime(files, dirpath):
     # ctime = last time a file's metadata was changed (owner, permissions, etc.)
     # row['ctime'] = os.path.getctime(os.path.join(dirpath, fname))
 
-def create_directories(fullpath):
-    ''' The fullpath arg includes the file name and extension. '''
-    path, filename = os.path.split(fullpath)
-    if not os.path.exists(path):
-        os.makedirs(path, mode=0o777, exist_ok=True)
+def makedirs_dirpath(dirpath):
+    ''' Creates directories in dirpath if they do not exist already.
+        dirpath is a string (or a path-like object), a path to a directory.
+        os.makedirs requires a dirpath not a filepath.  It will create a
+        directory called 'myfile.txt' if given a filepath. '''
+    os.makedirs(dirpath, exist_ok=True)
+
+def makedirs_filepath(filepath):
+    ''' Creates directories in filepath if they do not exist already.
+        filepath is a string, a path to a file. '''
+    dirpath, filename = os.path.split(filepath)
+    makedirs_dirpath(dirpath)
 
 def remove_file(f):
     ''' Delete a file if it already exists. '''
