@@ -83,6 +83,13 @@ def upload_rows(rootdir, ftppath, rows, connection):
 
 
 def main(args):
+    if not os.path.exists(args.rootdir):
+        print('Oops, bad path given for the directory that should contain the files to upload.')
+        return
+    if not os.path.exists(args.csvfile):
+        print('Oops, bad path given for the csv input file.')
+        return
+
     rows_to_upload = []
 
     for row in read_csv(args.csvfile):
