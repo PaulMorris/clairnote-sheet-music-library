@@ -19,7 +19,8 @@ if (!document.getElementsByClassName) {
       lunrIndexSession,
       searchBox = document.getElementById("search-box"),
       searchResults = document.getElementById('search-results'),
-      mutopiaFilterButtons = document.getElementById('mutopia-filter-buttons');
+      mutopiaFilterButtons = document.getElementById('mutopia-filter-buttons'),
+      showing = document.getElementById('showing');
 
   var oneBoxAnchorClickHandler = function () {
       var id = this.parentNode.firstChild.id,
@@ -242,8 +243,7 @@ if (!document.getElementsByClassName) {
       }
       // update 'showing n of x'
       var total = collection === 'thesession' ? sessionIdsSorted.length : mutopiaIdsSorted.length;
-      document.getElementById('showing')
-          .textContent = '| ' + results.length + ' results out of ' + total;
+      showing.textContent = '| ' + results.length + ' results out of ' + total;
   }
 
   var applyFilters = function (ids, store, filters, index) {
@@ -388,7 +388,7 @@ if (!document.getElementsByClassName) {
           }
       });
 
-      document.getElementById("source-selector").addEventListener("input", function(event) { switchSourceCollection(event);}, false);
+      document.getElementById("source-selector").addEventListener("input", switchSourceCollection, false);
 
       document.getElementById("styles-filter-button").addEventListener("click", function() {showFiltersButton('style-filters');}, false);
       document.getElementById("instruments-filter-button").addEventListener("click", function () {showFiltersButton('instrument-filters');}, false);
