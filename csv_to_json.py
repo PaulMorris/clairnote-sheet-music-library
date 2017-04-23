@@ -81,12 +81,12 @@ def make_json_session(csvfile, jsfile):
             else:
                 fname = regexes['session-filename'].search(row['filename']).group(1)
                 titles.append(row['cn-title'])
-                titles_to_ids[row['cn-title']] = ID
+                titles_to_ids[row['cn-title']] = int(ID)
                 items_dict[ID] = [
                      row['cn-title'],
                      row['meter'],
                      fname,
-                     row['setting-id'],
+                     int(row['setting-id']),
                      [int(row['setting-number'])]
                 ]
 
