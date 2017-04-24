@@ -14,13 +14,7 @@ if (!document.getElementsByClassName) {
   var styleBoxes = {},
       instrumentBoxes = {},
       composerBoxes = {},
-
-      makeResultLi,
-      sortedIds,
-      collectionIndex,
-      collectionItems,
       searchAndFilter,
-
       lunrIndexMutopia,
       lunrIndexSession,
       searchBox = document.getElementById("search-box"),
@@ -233,7 +227,7 @@ if (!document.getElementsByClassName) {
       return li;
   };
 
-  var displaySearchResults = function (results, store) {
+  var displaySearchResults = function (results, store, makeResultLi, sortedIds) {
       searchResults.innerHTML = '';
       // If there are any results, iterate over them.
       if (results.length) {
@@ -289,34 +283,42 @@ if (!document.getElementsByClassName) {
         }
     }
 
-  var searchAndFilterCollection = function (collection) {
+  var searchAndFilterCollection = function (collection, makeResultLi, sortedIds, index, items) {
       var query = searchBox.value.trimLeft();
       // .slice() is not needed on sortedIds since the array is not mutated
-      var ids = query ? queryIndex(query, collectionIndex) : sortedIds;
+      var ids = query ? queryIndex(query, index) : sortedIds;
 
       var filteredIds = collection === 'thesession' ? ids : applyMutopiaFilters(ids);
-      displaySearchResults(filteredIds, collectionItems);
+      displaySearchResults(filteredIds, items, makeResultLi, sortedIds);
   };
 
     var showHideFilters = function (collection) {
         mutopiaFilterButtons.style.display = collection === 'mutopia' ? 'inline' : 'none';
     };
 
-    var setCollection = function (collection) {
+    var makeSearchFunction = function (collection) {
         if (collection === 'mutopia') {
-            makeResultLi = makeResultLiMutopia;
-            sortedIds = mutopiaIdsSorted;
-            collectionIndex = lunrIndexMutopia;
-            collectionItems = mutopiaItems;
+            return searchAndFilterCollection.bind(
+                null,
+                collection,
+                makeResultLiMutopia,
+                mutopiaIdsSorted,
+                lunrIndexMutopia,
+                mutopiaItems
+            );
+
         } else if (collection === 'thesession') {
-            makeResultLi = makeResultLiSession;
-            sortedIds = sessionIdsSorted;
-            collectionIndex = lunrIndexSession;
-            collectionItems = sessionItems;
+            return searchAndFilterCollection.bind(
+                null,
+                collection,
+                makeResultLiSession,
+                sessionIdsSorted,
+                lunrIndexSession,
+                sessionItems
+            );
         } else {
             console.error('Clairnote: bad collection value');
         }
-        searchAndFilter = searchAndFilterCollection.bind(null, collection);
     };
 
     var switchSourceCollection = function (event) {
@@ -326,7 +328,7 @@ if (!document.getElementsByClassName) {
         setTimeout(function() {
             var collection = event.target.value;
             showHideFilters(collection);
-            setCollection(collection);
+            searchAndFilter = makeSearchFunction(collection);
             searchAndFilter();
         }, 0);
         return false;
@@ -399,18 +401,23 @@ if (!document.getElementsByClassName) {
           lunrIndexMutopia = lunr(initIndexMutopia);
           mutopiaIdsSorted.forEach(populateIndexMutopia);
           refreshBoxesState();
-          setCollection(collection);
+
+          searchAndFilter = makeSearchFunction(collection);
           searchAndFilter();
+
           lunrIndexSession = lunr(initIndexSession);
           sessionIdsSorted.forEach(populateIndexSession);
 
       } else if (collection === 'thesession') {
           lunrIndexSession = lunr(initIndexSession);
           sessionIdsSorted.forEach(populateIndexSession);
-          setCollection(collection);
+
+          searchAndFilter = makeSearchFunction(collection);
           searchAndFilter();
+
           lunrIndexMutopia = lunr(initIndexMutopia);
           mutopiaIdsSorted.forEach(populateIndexMutopia);
+          refreshBoxesState();
       }
 
       // EVENT LISTENERS: GENERAL
