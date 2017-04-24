@@ -301,6 +301,9 @@ if (!document.getElementsByClassName) {
       }
   };
 
+    var showHideFilters = function (collection) {
+        mutopiaFilterButtons.style.display = collection === 'mutopia' ? 'inline' : 'none';
+    };
 
     var switchSourceCollection = function (event) {
         doNotPropagate(event);
@@ -308,7 +311,7 @@ if (!document.getElementsByClassName) {
         setTimeout(function() {
             collection = event.target.value;
             searchAndFilter();
-            mutopiaFilterButtons.style.display = collection === 'mutopia' ? 'inline' : 'none';
+            showHideFilters(collection);
         }, 1);
         return false;
     }
@@ -373,6 +376,12 @@ if (!document.getElementsByClassName) {
           })
       });
 
+      // set the collection from the current value of the drop down menu
+      // and show/hide the filters
+      var sourceSelector = document.getElementById("source-selector");
+      collection = sourceSelector.options[sourceSelector.selectedIndex].value;
+      showHideFilters(collection);
+
       // add checkbox listeners for anchor tags
       for (i = 0; i < boxAnchors.length; i += 1) {
           boxAnchors[i].addEventListener("click", oneBoxAnchorClickHandler, false);
@@ -388,7 +397,7 @@ if (!document.getElementsByClassName) {
           }
       });
 
-      document.getElementById("source-selector").addEventListener("input", switchSourceCollection, false);
+      sourceSelector.addEventListener("input", switchSourceCollection, false);
 
       document.getElementById("styles-filter-button").addEventListener("click", function() {showFiltersButton('style-filters');}, false);
       document.getElementById("instruments-filter-button").addEventListener("click", function () {showFiltersButton('instrument-filters');}, false);
@@ -410,7 +419,6 @@ if (!document.getElementsByClassName) {
       document.getElementById("c-none").addEventListener("click", function () {multiBoxToggleHandler("c-box", 'composer-form', false); }, false);
 
       refreshBoxesState();
-      // clear loading message
-      document.getElementById('search-results').innerHTML = 'Loaded and ready.  Do a search and/or apply a filter to find some sheet music.';
+      searchAndFilter();
   }
 })();
