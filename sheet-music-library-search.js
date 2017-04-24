@@ -317,9 +317,6 @@ if (!document.getElementsByClassName) {
             console.error('Clairnote: bad collection value');
         }
         searchAndFilter = searchAndFilterCollection.bind(null, collection);
-
-        showHideFilters(collection);
-        searchAndFilter();
     };
 
     var switchSourceCollection = function (event) {
@@ -328,8 +325,10 @@ if (!document.getElementsByClassName) {
         // collection is e.g. 'thesession', 'mutopia'
         setTimeout(function() {
             var collection = event.target.value;
+            showHideFilters(collection);
             setCollection(collection);
-        }, 1);
+            searchAndFilter();
+        }, 0);
         return false;
     }
 
@@ -345,11 +344,8 @@ if (!document.getElementsByClassName) {
 
   // initialize everything
   window.onload = function () {
-      var i,
-          boxAnchors = document.getElementsByClassName('f-link');
 
-      // Initalize lunr with the fields it will be searching on.
-      lunrIndexMutopia = lunr(function () {
+      var initIndexMutopia = function () {
           this.ref('id');
           this.field('title', { boost: 10 });
           this.field('style');
@@ -359,10 +355,9 @@ if (!document.getElementsByClassName) {
           this.field('poet');
           this.field('date');
           this.field('arranger');
-      });
+      };
 
-      // Add the data to lunr index
-      mutopiaIdsSorted.forEach(function (id) {
+      var populateIndexMutopia = function (id) {
           var item = mutopiaItems[id];
           lunrIndexMutopia.add({
               // id is required
@@ -376,14 +371,14 @@ if (!document.getElementsByClassName) {
               'date': item[9],
               'arranger': item[10]
           });
-      });
+      };
 
-      lunrIndexSession = lunr(function () {
+      var initIndexSession = function () {
           this.field('title', { boost: 10 });
           this.field('meter');
-      });
+      };
 
-      sessionIdsSorted.forEach(function (id) {
+      var populateIndexSession = function (id) {
           var item = sessionItems[id];
           lunrIndexSession.add({
               // id is required
@@ -391,14 +386,37 @@ if (!document.getElementsByClassName) {
               'title': item[0],
               'meter': item[1]
           })
-      });
+      };
 
-      // add checkbox listeners for anchor tags
-      for (i = 0; i < boxAnchors.length; i += 1) {
-          boxAnchors[i].addEventListener("click", oneBoxAnchorClickHandler, false);
+      // get the collection from the current value of the drop down menu
+      var sourceSelector = document.getElementById("source-selector"),
+          collection = sourceSelector.options[sourceSelector.selectedIndex].value;
+
+      // Initalize lunr indexes with the fields we will be searching on.
+      // Then add the data to the indexes.
+      // Do the current collection first, set collection, and show results
+      if (collection === 'mutopia') {
+          lunrIndexMutopia = lunr(initIndexMutopia);
+          mutopiaIdsSorted.forEach(populateIndexMutopia);
+          refreshBoxesState();
+          setCollection(collection);
+          searchAndFilter();
+          lunrIndexSession = lunr(initIndexSession);
+          sessionIdsSorted.forEach(populateIndexSession);
+
+      } else if (collection === 'thesession') {
+          lunrIndexSession = lunr(initIndexSession);
+          sessionIdsSorted.forEach(populateIndexSession);
+          setCollection(collection);
+          searchAndFilter();
+          lunrIndexMutopia = lunr(initIndexMutopia);
+          mutopiaIdsSorted.forEach(populateIndexMutopia);
       }
 
-      // add event listeners
+      // EVENT LISTENERS: GENERAL
+
+      sourceSelector.addEventListener("input", switchSourceCollection, false);
+
       document.getElementById("search-button").addEventListener("click", searchAndFilter, false);
       document.getElementById("search-box").addEventListener("keyup", function(event) {
           doNotPropagate(event);
@@ -409,20 +427,19 @@ if (!document.getElementsByClassName) {
           }
       });
 
-      var sourceSelector = document.getElementById("source-selector");
-      sourceSelector.addEventListener("input", switchSourceCollection, false);
+      document.getElementById("dark-overlay").addEventListener("click", darkOverlayClick, false);
+      document.getElementById('about').addEventListener('click', doNotPropagate, false);
+      document.getElementById("about-button").addEventListener("click", function () {showFiltersButton('about');}, false);
+
+      // EVENT LISTENERS: FILTERS
 
       document.getElementById("styles-filter-button").addEventListener("click", function() {showFiltersButton('style-filters');}, false);
       document.getElementById("instruments-filter-button").addEventListener("click", function () {showFiltersButton('instrument-filters');}, false);
       document.getElementById("composers-filter-button").addEventListener("click", function() {showFiltersButton('composer-filters');}, false);
-      document.getElementById("about-button").addEventListener("click", function () {showFiltersButton('about');}, false);
-
-      document.getElementById("dark-overlay").addEventListener("click", darkOverlayClick, false);
 
       document.getElementById('style-filters').addEventListener('click', doNotPropagate, false);
       document.getElementById('instrument-filters').addEventListener('click', doNotPropagate, false);
       document.getElementById('composer-filters').addEventListener('click', doNotPropagate, false);
-      document.getElementById('about').addEventListener('click', doNotPropagate, false);
 
       document.getElementById("s-all").addEventListener("click", function () {multiBoxToggleHandler("s-box", 'style-form', true); }, false);
       document.getElementById("s-none").addEventListener("click", function () {multiBoxToggleHandler("s-box", 'style-form', false); }, false);
@@ -431,10 +448,13 @@ if (!document.getElementsByClassName) {
       document.getElementById("c-all").addEventListener("click", function () {multiBoxToggleHandler("c-box", 'composer-form', true); }, false);
       document.getElementById("c-none").addEventListener("click", function () {multiBoxToggleHandler("c-box", 'composer-form', false); }, false);
 
-      refreshBoxesState();
+      // add checkbox listeners for anchor tags
+      var boxAnchors = document.getElementsByClassName('f-link');
+      for (var i = 0; i < boxAnchors.length; i += 1) {
+          boxAnchors[i].addEventListener("click", oneBoxAnchorClickHandler, false);
+      }
 
-      // set the collection from the current value of the drop down menu
-      var collection = sourceSelector.options[sourceSelector.selectedIndex].value;
-      setCollection(collection);
+      // only show the filters for mutopia collection after event listeners are added
+      showHideFilters(collection);
   }
 })();
