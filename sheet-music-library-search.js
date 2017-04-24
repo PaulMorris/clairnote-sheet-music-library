@@ -14,7 +14,13 @@ if (!document.getElementsByClassName) {
   var styleBoxes = {},
       instrumentBoxes = {},
       composerBoxes = {},
-      collection,
+
+      makeResultLi,
+      sortedIds,
+      collectionIndex,
+      collectionItems,
+      searchAndFilter,
+
       lunrIndexMutopia,
       lunrIndexSession,
       searchBox = document.getElementById("search-box"),
@@ -165,7 +171,7 @@ if (!document.getElementsByClassName) {
       return li;
   };
 
-  var makeResultLi = function (id, item) {
+  var makeResultLiMutopia = function (id, item) {
       var li = document.createElement('li'),
           strong = document.createElement('strong'),
           line2 = document.createElement('span'),
@@ -229,11 +235,10 @@ if (!document.getElementsByClassName) {
 
   var displaySearchResults = function (results, store) {
       searchResults.innerHTML = '';
-      var makeLi = collection === 'thesession' ? makeResultLiSession : makeResultLi;
       // If there are any results, iterate over them.
       if (results.length) {
           results.forEach(function (id) {
-              searchResults.appendChild(makeLi(id, store[id]));
+              searchResults.appendChild(makeResultLi(id, store[id]));
           })
       } else {
           var li = document.createElement('li');
@@ -242,8 +247,7 @@ if (!document.getElementsByClassName) {
           searchResults.appendChild(li);
       }
       // update 'showing n of x'
-      var total = collection === 'thesession' ? sessionIdsSorted.length : mutopiaIdsSorted.length;
-      showing.textContent = '| ' + results.length + ' results out of ' + total;
+      showing.textContent = '| ' + results.length + ' results out of ' + sortedIds.length;
   }
 
   var applyFilters = function (ids, store, filters, index) {
@@ -268,50 +272,63 @@ if (!document.getElementsByClassName) {
       });
   };
 
-  var searchAndFilter = function () {
-      var query = searchBox.value.trimLeft(),
-          ids, ids2, ids3, ids4,
-          lunrResults, searchIndex, sortedIds;
+    var applyMutopiaFilters = function (ids) {
+        var ids2 = Object.keys(styleBoxes).length ? applyFilters(ids, mutopiaItems, styleBoxes, 0) : ids,
+            ids3 = Object.keys(composerBoxes).length ? applyFilters(ids2, mutopiaItems, composerBoxes, 1) : ids2,
+            ids4 = Object.keys(instrumentBoxes).length ? applyInstrumentFilters(ids3, mutopiaItems, instrumentBoxes, 3) : ids3;
+        return ids4;
+    }
 
-      if (collection === 'thesession') {
-          searchIndex = lunrIndexSession;
-          sortedIds = sessionIdsSorted;
-      } else {
-          searchIndex = lunrIndexMutopia;
-          sortedIds = mutopiaIdsSorted;
-      }
+    var queryIndex = function (query, index) {
+        if (query) {
+            var results = index.search(query);
+            var ids = results.map(function (item) { return item.ref; });
+            return ids;
+        } else {
+            return false;
+        }
+    }
 
-      // search the index
-      if (query) {
-          lunrResults = searchIndex.search(query);
-          ids = lunrResults.map(function (item) { return item.ref; });
-      } else {
-          // .slice() not needed since ids is not mutated
-          ids = sortedIds;
-      }
+  var searchAndFilterCollection = function (collection) {
+      var query = searchBox.value.trimLeft();
+      // .slice() is not needed on sortedIds since the array is not mutated
+      var ids = query ? queryIndex(query, collectionIndex) : sortedIds;
 
-      // apply filters to results
-      if (collection === 'thesession') {
-          displaySearchResults(ids, sessionItems);
-      } else {
-          ids2 = Object.keys(styleBoxes).length ? applyFilters(ids, mutopiaItems, styleBoxes, 0) : ids;
-          ids3 = Object.keys(composerBoxes).length ? applyFilters(ids2, mutopiaItems, composerBoxes, 1) : ids2;
-          ids4 = Object.keys(instrumentBoxes).length ? applyInstrumentFilters(ids3, mutopiaItems, instrumentBoxes, 3) : ids3;
-          displaySearchResults(ids4, mutopiaItems);
-      }
+      var filteredIds = collection === 'thesession' ? ids : applyMutopiaFilters(ids);
+      displaySearchResults(filteredIds, collectionItems);
   };
 
     var showHideFilters = function (collection) {
         mutopiaFilterButtons.style.display = collection === 'mutopia' ? 'inline' : 'none';
     };
 
+    var setCollection = function (collection) {
+        if (collection === 'mutopia') {
+            makeResultLi = makeResultLiMutopia;
+            sortedIds = mutopiaIdsSorted;
+            collectionIndex = lunrIndexMutopia;
+            collectionItems = mutopiaItems;
+        } else if (collection === 'thesession') {
+            makeResultLi = makeResultLiSession;
+            sortedIds = sessionIdsSorted;
+            collectionIndex = lunrIndexSession;
+            collectionItems = sessionItems;
+        } else {
+            console.error('Clairnote: bad collection value');
+        }
+        searchAndFilter = searchAndFilterCollection.bind(null, collection);
+
+        showHideFilters(collection);
+        searchAndFilter();
+    };
+
     var switchSourceCollection = function (event) {
         doNotPropagate(event);
         // a little async prevents jank in menu
+        // collection is e.g. 'thesession', 'mutopia'
         setTimeout(function() {
-            collection = event.target.value;
-            searchAndFilter();
-            showHideFilters(collection);
+            var collection = event.target.value;
+            setCollection(collection);
         }, 1);
         return false;
     }
@@ -376,12 +393,6 @@ if (!document.getElementsByClassName) {
           })
       });
 
-      // set the collection from the current value of the drop down menu
-      // and show/hide the filters
-      var sourceSelector = document.getElementById("source-selector");
-      collection = sourceSelector.options[sourceSelector.selectedIndex].value;
-      showHideFilters(collection);
-
       // add checkbox listeners for anchor tags
       for (i = 0; i < boxAnchors.length; i += 1) {
           boxAnchors[i].addEventListener("click", oneBoxAnchorClickHandler, false);
@@ -391,12 +402,14 @@ if (!document.getElementsByClassName) {
       document.getElementById("search-button").addEventListener("click", searchAndFilter, false);
       document.getElementById("search-box").addEventListener("keyup", function(event) {
           doNotPropagate(event);
+          // only search on enter key, number 13
           if (event.which == 13) {
               searchAndFilter();
               return false;
           }
       });
 
+      var sourceSelector = document.getElementById("source-selector");
       sourceSelector.addEventListener("input", switchSourceCollection, false);
 
       document.getElementById("styles-filter-button").addEventListener("click", function() {showFiltersButton('style-filters');}, false);
@@ -419,6 +432,9 @@ if (!document.getElementsByClassName) {
       document.getElementById("c-none").addEventListener("click", function () {multiBoxToggleHandler("c-box", 'composer-form', false); }, false);
 
       refreshBoxesState();
-      searchAndFilter();
+
+      // set the collection from the current value of the drop down menu
+      var collection = sourceSelector.options[sourceSelector.selectedIndex].value;
+      setCollection(collection);
   }
 })();
