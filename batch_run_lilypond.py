@@ -67,9 +67,9 @@ def error_check(console_out, ID, path, errorfile):
             elif regexes['err'].search(line):
                 problem_file_ids[ID] = 'ly error or warn'
                 err.write('error: ' + ID + ' ' + path + '\n' + line + '\n')
-            elif regexes['clairnote'].search(line):
+            elif regexes['clairnote_ly'].search(line):
                 problem_file_ids[ID] = 'ly error or warn'
-                err.write('clairnote-code problem: ' + ID + ' ' + path + '\n')
+                err.write('clairnote.ly problem: ' + ID + ' ' + path + '\n')
                 if regexes['ambitus'].search(line):
                     err.write('Ambitus engraver: ' + ID + ' ' + path + '\n')
     return problem_file_ids

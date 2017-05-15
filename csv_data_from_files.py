@@ -2,7 +2,7 @@
 import os, csv, argparse
 from ly_parsing import (regexes, regex_search, vsn_compare, greater_or_equal,
     get_all_lilypond_filenames, get_ly_filenames, get_version, get_included_files,
-    get_header_data, check_for_clairnote_code, get_most_recent_mtime, makedirs_filepath)
+    get_header_data, check_for_clairnote_ly, get_most_recent_mtime, makedirs_filepath)
 from csv_merging import merge_csv_data
 
 # walks through a directory and subdirectories creating a csv file with data from the ly files
@@ -93,8 +93,8 @@ def make_row(lyfilenames, dirpath, rootdir, mode, csv_keys):
     included_files = get_included_files(lyfilenames, dirpath)
     not_included_files = list(set(lyfilenames).difference(included_files))
 
-    # check for clairnote-code.ly in top-level files
-    clnt_set = check_for_clairnote_code(not_included_files, dirpath)
+    # check for clairnote.ly in top-level files
+    clnt_set = check_for_clairnote_ly(not_included_files, dirpath)
 
     if len(clnt_set) > 1:
         conflicts.add('cn-code')

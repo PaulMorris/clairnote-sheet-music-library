@@ -1,5 +1,5 @@
-JUST RERERUN LILYPOND ON CURRENT COLLECTION TO UPDATE PDFS 
-for example, when there are improvements / changes to clairnote-code.ly
+JUST RERERUN LILYPOND ON CURRENT COLLECTION TO UPDATE PDFS
+for example, when there are improvements / changes to clairnote.ly
 
 0. make sure you have an "out" directory with only "previous-final.csv" in it
    (this is a copy of the previous "full-final.csv")

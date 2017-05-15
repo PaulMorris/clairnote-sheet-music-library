@@ -1,5 +1,5 @@
 \version "2.19.46"
-\include "clairnote-code.ly"
+\include "clairnote.ly"
 
 \include "flauti.ly"
 \include "oboi.ly"

@@ -43,7 +43,7 @@ Update this branch with latest mutopia changes with:
 
 - there should not be any merge conflicts unless someone updates a file that I have locally updated with convert-ly.  And then it should be easy to resolve the merge conflicts.
 
-- the only changes to the files in this branch are adding \include "clairnote-code.ly" and the new footer fields.  This should usually be done with python script, but can be done manually if need be.
+- the only changes to the files in this branch are adding \include "clairnote.ly" and the new footer fields.  This should usually be done with python script, but can be done manually if need be.
 
 - make sure to commit any changes.
 

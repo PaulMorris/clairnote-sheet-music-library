@@ -25,7 +25,7 @@ JUST UPDATE WITH NEW FILES
 
 3. run mass-edit-lys script to edit ly files
   - takes a csv file and edits those files
-  - adds clairnote-code include line, edits the tagline, copyright, etc.
+  - adds clairnote.ly include line, edits the tagline, copyright, etc.
   - check results with git diff
 
 3. git commit changes to repo
@@ -97,7 +97,7 @@ FROM SCRATCH
 
 3. edit ly files with edit-lys script
   - takes a CSV file of files to edit, and edits those files
-  - adds clairnote-code include line
+  - adds clairnote.ly include line
   - edits the tagline, copyright, etc.
 
 3. git commit changes to repo

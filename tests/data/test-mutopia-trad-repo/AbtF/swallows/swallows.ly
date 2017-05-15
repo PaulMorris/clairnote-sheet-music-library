@@ -1,5 +1,5 @@
 \version "2.19.16"
-\include "clairnote-code.ly"
+\include "clairnote.ly"
 
 \include "english.ly"
 #(set-global-staff-size 16)

@@ -66,10 +66,10 @@ def handle_line_mutopia(line, newf, old_mutopia_footer, is_topfile, row):
             newf.write(s + cc + '\n')
             newf.write(s + 'tagline = ##f\n')
 
-        # clairnote code - only if this is a topfile
+        # clairnote.ly - only if this is a topfile
         elif version_case:
             newf.write(line)
-            newf.write(r'\include "clairnote-code.ly"' + '\n')
+            newf.write(r'\include "clairnote.ly"' + '\n')
 
         # else straight copy
         else:
@@ -146,10 +146,10 @@ def handle_line_session(line, newf, row):
             tagline = session_tagline(row['subtitle'])
             newf.write(s + tagline + '\n')
 
-        # clairnote code
+        # clairnote.ly
         elif version_case and row['cn-code'] != 'True':
             newf.write(line)
-            newf.write(r'\include "clairnote-code.ly"' + '\n')
+            newf.write(r'\include "clairnote.ly"' + '\n')
 
         # meter (jig, reel, etc.)
         # for capitalization, the value stored in the CSV is already capitalized
@@ -205,7 +205,7 @@ def main(args):
         else:
             raise ValueError("Oops! We need a valid mode argument, either 'mutopia' or 'thesession'.")
 
-        print("LilyPond files copied to a new location and edited to include clairnote code and footer.")
+        print("LilyPond files copied to a new location and edited to include clairnote.ly and footer.")
     except ValueError as err:
         print(err.args)
 

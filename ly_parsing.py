@@ -14,7 +14,7 @@ regexes = {
     'muto_id': re.compile("[0-9]*$"),
     'the_session_id': re.compile("([0-9]*)#setting([0-9]*)"), # https://thesession.org/tunes/
     'footer': re.compile("[0-9][0-9][0-9][0-9]/[0-9][0-9]/[0-9][0-9]"),
-    'clairnote_code': re.compile('\\\\include.*?\"clairnote-code.ly\"'),
+    'include_clairnote_ly': re.compile('\\\\include.*?\"clairnote\.ly\"'),
     'include': re.compile('\\\\include.*?\".*?\"'),
     'score': re.compile('\\\\score'),
     'mutopiacomposer': re.compile('.*mutopiacomposer.*', re.DOTALL),
@@ -27,7 +27,7 @@ regexes = {
     # for detecting errors when running LilyPond
     'warn': re.compile('.*warning:'),
     'err': re.compile('.*error:'),
-    'clairnote':  re.compile('.*clairnote-code.ly.*'),
+    'clairnote_ly':  re.compile('.*clairnote\.ly.*'),
 
     'midi1': re.compile(r'.*programming error\: Impossible or ambiguous \(de\)crescendo in MIDI.*'),
     'midi2': re.compile(r'.*warning\: \(De\)crescendo with unspecified starting volume in MIDI.*'),
@@ -219,11 +219,11 @@ def get_header_data(lyfilenames, dirpath, csv_keys):
             '''
     return header_data, inconsistent_keys
 
-def check_for_clairnote_code(files, dirpath):
+def check_for_clairnote_ly(files, dirpath):
     result = set()
     for fname in files:
         with open(os.path.join(dirpath, fname), 'r') as f:
-            c = regexes['clairnote_code'].search(f.read())
+            c = regexes['include_clairnote_ly'].search(f.read())
             if c:
                 result.add(True)
             else:
@@ -244,7 +244,7 @@ def get_most_recent_mtime(files, dirpath):
 
 def makedirs_dirpath(dirpath):
     ''' Creates directories in dirpath if they do not exist already.
-        dirpath is a string (or a path-like object), a path to a directory.
+        dirpath is a string (or a 'path-like object'), a path to a directory.
         os.makedirs requires a dirpath not a filepath.  It will create a
         directory called 'myfile.txt' if given a filepath. '''
     os.makedirs(dirpath, exist_ok=True)
