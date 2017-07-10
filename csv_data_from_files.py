@@ -42,6 +42,10 @@ def get_csv_keys(mode):
             # these are the actual header fields in the session ly files,
             # book and footnotes are rarely used
             'title', 'subtitle', 'meter', 'abcTranscription', 'crossRefNumber', 'tagline', 'footnotes', 'book',
+            # the url that contains the id data is originally in subtitle
+            # but we move it to source, so we need a source key, for rescanning
+            # files that have been updated, otherwise we can't get the id data
+            'source',
             # maybe some files use these, so include them for good measure
             'composer']
     }
@@ -125,17 +129,23 @@ def make_row(lyfilenames, dirpath, rootdir, mode, csv_keys):
 
     elif mode == 'thesession':
         row['setting-number'] = int(regexes['setting-number'].search(row['filename']).group(1))
-        subtitle_match = regexes['the_session_id'].search(row['subtitle'])
-        if subtitle_match:
-            row['tune-id'] = subtitle_match.group(1)
-            row['setting-id'] = subtitle_match.group(2)
+        id_data_match = regexes['the_session_id'].search(row['subtitle'])
+
+        if not id_data_match:
+            # for re-scan of files that have already been processed, the url
+            # with id data is now in source field, not subtitle
+            id_data_match = regexes['the_session_id'].search(row['source'])
+
+        if id_data_match:
+            row['tune-id'] = id_data_match.group(1)
+            row['setting-id'] = id_data_match.group(2)
             row['id'] = make_multi_digit(row['tune-id'], 7) + '-' + make_multi_digit(row['setting-number'], 3)
         else:
             # TODO: make this better
-            print("Bad subtitle_match:", "'" + row["title"] + "'", "'" + row["subtitle"] + "'", "'" + row["filename"] + "'")
+            print("Bad id_data_match:", "'" + row["title"] + "'", "'" + row["subtitle"] + "'", "'" + row["filename"] + "'")
             row['id'] = 'ERROR'
             row['omit?'] = 'T'
-            row['omit-reason'] = 'bad subtitle, could not calculate id'
+            row['omit-reason'] = 'bad subtitle/source, could not calculate id'
         # use title() to capitalize all words in the string, needed for Slip Jig
         row['meter'] = row['meter'].title()
         # use cn-title for consistency with mutopia csv key
