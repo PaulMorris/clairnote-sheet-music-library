@@ -20,7 +20,8 @@ if (!document.getElementsByClassName) {
       searchBox = document.getElementById("search-box"),
       searchResults = document.getElementById('search-results'),
       mutopiaFilterButtons = document.getElementById('mutopia-filter-buttons'),
-      showing = document.getElementById('showing');
+      showing = document.getElementById('showing'),
+      collectionLink = document.getElementById('collection-link');
 
   var oneBoxAnchorClickHandler = function () {
       var id = this.parentNode.firstChild.id,
@@ -296,6 +297,18 @@ if (!document.getElementsByClassName) {
         mutopiaFilterButtons.style.display = collection === 'mutopia' ? 'inline' : 'none';
     };
 
+    var changeCollectionLink = function (collection) {
+        if (collection === 'mutopia') {
+            collectionLink.href = "http://www.mutopiaproject.org/";
+            collectionLink.firstChild.data = "the Mutopia Project";
+        } else if (collection === 'thesession') {
+            collectionLink.href = "https://thesession.org/";
+            collectionLink.firstChild.data = "the Session";
+        } else {
+            console.error('Clairnote: bad collection value');
+        }
+    };
+
     var makeSearchFunction = function (collection) {
         if (collection === 'mutopia') {
             return searchAndFilterCollection.bind(
@@ -328,6 +341,7 @@ if (!document.getElementsByClassName) {
         setTimeout(function() {
             var collection = event.target.value;
             showHideFilters(collection);
+            changeCollectionLink(collection);
             searchAndFilter = makeSearchFunction(collection);
             searchAndFilter();
         }, 0);
@@ -346,6 +360,12 @@ if (!document.getElementsByClassName) {
 
   // initialize everything
   window.onload = function () {
+
+      // get the collection from the current value of the drop down menu
+      var sourceSelector = document.getElementById("source-selector"),
+          collection = sourceSelector.options[sourceSelector.selectedIndex].value;
+
+      changeCollectionLink(collection);
 
       var initIndexMutopia = function () {
           this.ref('id');
@@ -389,10 +409,6 @@ if (!document.getElementsByClassName) {
               'meter': item[1]
           })
       };
-
-      // get the collection from the current value of the drop down menu
-      var sourceSelector = document.getElementById("source-selector"),
-          collection = sourceSelector.options[sourceSelector.selectedIndex].value;
 
       // Initalize lunr indexes with the fields we will be searching on.
       // Then add the data to the indexes.
