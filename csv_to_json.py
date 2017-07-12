@@ -234,9 +234,9 @@ def html_filter_div_start(div_id, h3_text, all_id, none_id, form_id):
         '<form name="' + form_id + '" id="' + form_id + '">\n\n'
     )
 
-def html_li(text, tally, name):
+def html_li(text, tally, name, input_id):
     return (
-        '<li><input type="checkbox" name="' + name + '" id="' + text + '" />' +
+        '<li><input type="checkbox" name="' + name + '" id="' + input_id + '" />' +
         '<a class="f-link">' + text + ' [' + str(tally) + ']</a></li>\n'
     )
 
@@ -244,7 +244,7 @@ def html_checkboxes(ul_open, ul_close, form_close_div_close, tally, item_list, g
     html = ul_open
     count = 0
     for n in item_list:
-        html += html_li(n, tally[n], name_field)
+        html += html_li(n, tally[n], name_field, n)
         count += 1
         if count % group_size == 0:
             html += ul_close + ul_open
@@ -280,7 +280,7 @@ def html_checkboxes_composers(ul_open, ul_close, form_close_div_close, composer_
             del to_letters[0]
 
         li_text = c[1] + ", " + c[2] + " " + c[3]
-        html += html_li(li_text, composer_tally[c[0]], name_field)
+        html += html_li(li_text, composer_tally[c[0]], name_field, c[0])
         count += 1
 
     html += ul_close + form_close_div_close
