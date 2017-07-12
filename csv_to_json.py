@@ -215,7 +215,7 @@ def make_json_mutopia(csvfile, jsfile):
                 composer_lookup[c[0]] = ['{0} {1}'.format(c[2], c[1]), '{0}'.format(c[3])]
 
         composer_lookup_text = json.dumps(composer_lookup)
-        f.write('\nvar composer_lookup = ' + composer_lookup_text)
+        f.write('\nvar mutopiaComposerLookup = ' + composer_lookup_text)
 
         print('\nComposerLookup saved in JS file.')
 
